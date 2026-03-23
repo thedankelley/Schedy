@@ -1,0 +1,2 @@
+# Schedy
+Experimental Schedule Maker
