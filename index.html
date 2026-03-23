@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedy (Alpha) — Smart Store Scheduling</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@300;400;500&family=Material+Icons+Round" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+  :root {
+    --md-primary: #1a73e8;
+    --md-primary-container: #d3e3fd;
+    --md-on-primary: #ffffff;
+    --md-on-primary-container: #041e49;
+    --md-secondary: #00695c;
+    --md-secondary-container: #b2dfdb;
+    --md-on-secondary: #ffffff;
+    --md-tertiary: #e8710a;
+    --md-tertiary-container: #fde8d5;
+    --md-error: #b3261e;
+    --md-error-container: #f9dedc;
+    --md-surface: #fafafa;
+    --md-surface-variant: #f1f3f4;
+    --md-surface-container: #ffffff;
+    --md-surface-container-high: #f5f7fa;
+    --md-surface-container-highest: #e8eaed;
+    --md-outline: #dadce0;
+    --md-outline-variant: #e8eaed;
+    --md-on-surface: #202124;
+    --md-on-surface-variant: #5f6368;
+    --md-shadow: rgba(0,0,0,0.1);
+    --md-shadow-elevated: rgba(0,0,0,0.15);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --transition: 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAV ── */
+  .top-app-bar {
+    background: var(--md-surface-container);
+    border-bottom: 1px solid var(--md-outline);
+    padding: 0 16px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 3px var(--md-shadow);
+  }
+  .app-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--md-on-surface);
+  }
+  .app-logo-icon {
+    width: 36px; height: 36px;
+    background: var(--md-primary);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 20px;
+  }
+  .app-title {
+    font-family: 'Google Sans Display', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--md-primary);
+  }
+  .app-title span { color: var(--md-on-surface-variant); font-weight: 400; font-size: 14px; margin-left: 4px; }
+  .top-bar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  /* ── LAYOUT ── */
+  .app-layout { display: flex; flex: 1; min-height: 0; }
+
+  .nav-rail {
+    width: 80px;
+    background: var(--md-surface-container);
+    border-right: 1px solid var(--md-outline);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    gap: 4px;
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background var(--transition);
+    width: 72px;
+    color: var(--md-on-surface-variant);
+    font-size: 11px;
+    font-family: 'Google Sans', sans-serif;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    background: none;
+  }
+  .nav-item .material-icons-round { font-size: 24px; }
+  .nav-item:hover { background: var(--md-surface-variant); }
+  .nav-item.active {
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+  }
+
+  .main-content { flex: 1; padding: 24px; overflow-y: auto; max-width: 1400px; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--md-surface-container);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--md-outline);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px var(--md-shadow);
+    transition: box-shadow var(--transition);
+  }
+  .card:hover { box-shadow: 0 2px 8px var(--md-shadow-elevated); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .card-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .card-title { font-family: 'Google Sans', sans-serif; font-size: 16px; font-weight: 600; }
+  .card-subtitle { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-xl);
+    font-family: 'Google Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn .material-icons-round { font-size: 18px; }
+  .btn-filled { background: var(--md-primary); color: white; }
+  .btn-filled:hover { box-shadow: 0 2px 8px rgba(26,115,232,0.4); }
+  .btn-tonal { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  .btn-tonal:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  .btn-outlined { background: transparent; border: 1px solid var(--md-outline); color: var(--md-on-surface); }
+  .btn-outlined:hover { background: var(--md-surface-variant); }
+  .btn-text { background: transparent; color: var(--md-primary); padding: 8px 12px; }
+  .btn-text:hover { background: var(--md-primary-container); }
+  .btn-danger { background: var(--md-error); color: white; }
+  .btn-danger:hover { box-shadow: 0 2px 8px rgba(179,38,30,0.4); }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+  .btn-sm .material-icons-round { font-size: 16px; }
+  .btn-icon {
+    width: 40px; height: 40px; padding: 0;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--md-on-surface-variant);
+    transition: background var(--transition);
+  }
+  .btn-icon:hover { background: var(--md-surface-variant); }
+  .btn-icon .material-icons-round { font-size: 20px; }
+
+  /* ── FORM ELEMENTS ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 12px; font-weight: 500;
+    color: var(--md-on-surface-variant);
+    font-family: 'Google Sans', sans-serif;
+  }
+  .form-input, .form-select {
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'Roboto', sans-serif;
+    color: var(--md-on-surface);
+    background: var(--md-surface-container);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
+  }
+  .form-select { cursor: pointer; }
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .checkbox-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--md-outline);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+    user-select: none;
+    background: var(--md-surface-container);
+    color: var(--md-on-surface);
+    font-family: 'Google Sans', sans-serif;
+  }
+  .checkbox-chip input { display: none; }
+  .checkbox-chip.checked {
+    background: var(--md-primary-container);
+    border-color: var(--md-primary);
+    color: var(--md-on-primary-container);
+  }
+
+  /* ── CHIPS & BADGES ── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 12px;
+    border-radius: var(--radius-xl);
+    font-size: 12px; font-weight: 500;
+    font-family: 'Google Sans', sans-serif;
+  }
+  .chip-primary { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  .chip-secondary { background: var(--md-secondary-container); color: #004d40; }
+  .chip-tertiary { background: var(--md-tertiary-container); color: #7b3800; }
+  .chip-error { background: var(--md-error-container); color: var(--md-error); }
+  .chip-surface { background: var(--md-surface-variant); color: var(--md-on-surface-variant); }
+
+  /* ── TABLES ── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left; padding: 12px 16px;
+    font-family: 'Google Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--md-on-surface-variant);
+    border-bottom: 2px solid var(--md-outline);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--md-outline-variant);
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  .data-table tr:hover td { background: var(--md-surface-variant); }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* ── DIALOG ── */
+  .dialog-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .dialog-backdrop.open { display: flex; }
+  .dialog {
+    background: var(--md-surface-container);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    width: 100%; max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    animation: dialog-in 0.2s cubic-bezier(0.2,0,0,1);
+  }
+  @keyframes dialog-in {
+    from { opacity:0; transform: scale(0.92) translateY(8px); }
+    to { opacity:1; transform: scale(1) translateY(0); }
+  }
+  .dialog-title {
+    font-family: 'Google Sans Display', sans-serif;
+    font-size: 22px; font-weight: 600;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .dialog-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 24px; padding-top: 16px;
+    border-top: 1px solid var(--md-outline-variant);
+  }
+
+  /* ── SCHEDULE GRID ── */
+  .schedule-container { overflow-x: auto; }
+  .schedule-grid {
+    display: grid;
+    min-width: 900px;
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .schedule-header-row {
+    display: flex;
+    background: var(--md-primary);
+    color: white;
+    font-family: 'Google Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+  }
+  .schedule-emp-col { width: 160px; min-width: 160px; padding: 10px 12px; border-right: 1px solid rgba(255,255,255,0.2); }
+  .schedule-hours { flex: 1; display: flex; }
+  .hour-tick {
+    flex: 1; min-width: 40px;
+    padding: 10px 4px;
+    text-align: center; font-size: 11px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+  }
+  .schedule-row {
+    display: flex;
+    border-top: 1px solid var(--md-outline-variant);
+    min-height: 48px;
+    align-items: center;
+  }
+  .schedule-row:nth-child(even) { background: var(--md-surface-variant); }
+  .schedule-emp-name {
+    width: 160px; min-width: 160px;
+    padding: 8px 12px;
+    font-size: 13px; font-weight: 500;
+    border-right: 1px solid var(--md-outline-variant);
+    font-family: 'Google Sans', sans-serif;
+  }
+  .schedule-emp-store { font-size: 11px; color: var(--md-on-surface-variant); font-weight: 400; }
+  .schedule-timeline { flex: 1; position: relative; height: 48px; }
+  .shift-block {
+    position: absolute; top: 6px; height: 36px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    color: white;
+    font-family: 'Google Sans', sans-serif;
+    overflow: hidden;
+    cursor: pointer;
+    transition: filter var(--transition);
+    z-index: 1;
+  }
+  .shift-block:hover { filter: brightness(1.1); }
+  .lunch-block {
+    position: absolute; top: 16px; height: 16px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: white; font-weight: 700;
+  }
+  .hour-line {
+    position: absolute; top: 0; bottom: 0;
+    width: 1px; background: var(--md-outline-variant);
+    z-index: 0;
+  }
+
+  /* ── STATS CARDS ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--md-surface-container);
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 3px var(--md-shadow);
+  }
+  .stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .stat-value { font-family: 'Google Sans Display', sans-serif; font-size: 24px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-family: 'Google Sans Display', sans-serif;
+    font-size: 24px; font-weight: 700;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-sub { font-size: 14px; color: var(--md-on-surface-variant); margin-bottom: 24px; }
+
+  /* ── PAYROLL BAR ── */
+  .payroll-bar-container { margin-top: 12px; }
+  .payroll-bar-bg {
+    height: 8px; border-radius: 4px;
+    background: var(--md-outline);
+    overflow: hidden;
+  }
+  .payroll-bar-fill {
+    height: 100%; border-radius: 4px;
+    background: var(--md-primary);
+    transition: width 0.5s cubic-bezier(0.2,0,0,1);
+  }
+  .payroll-bar-fill.over { background: var(--md-error); }
+  .payroll-bar-fill.close { background: var(--md-secondary); }
+  .payroll-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 6px; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--md-on-surface-variant);
+  }
+  .empty-state .material-icons-round { font-size: 64px; margin-bottom: 16px; opacity: 0.4; display: block; }
+  .empty-state h3 { font-family: 'Google Sans', sans-serif; font-size: 18px; margin-bottom: 8px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── TOAST ── */
+  .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 500; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    background: #333; color: white;
+    padding: 12px 20px; border-radius: var(--radius-xl);
+    font-size: 14px; font-family: 'Google Sans', sans-serif;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    animation: toast-in 0.3s ease;
+    display: flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+  .toast.success { background: var(--md-secondary); }
+  .toast.error { background: var(--md-error); }
+  @keyframes toast-in { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+
+  /* ── WEEK SELECTOR ── */
+  .week-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .week-display {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 16px; font-weight: 600;
+    padding: 8px 16px;
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-md);
+    min-width: 200px; text-align: center;
+  }
+
+  /* ── STORE COLOR PILLS ── */
+  .store-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: var(--radius-xl);
+    font-size: 12px; font-weight: 600;
+    font-family: 'Google Sans', sans-serif;
+    color: white;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--md-outline); border-radius: 3px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .nav-rail { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+    .main-content { padding: 16px; }
+  }
+
+  /* ── TABS ── */
+  .tab-bar { display: flex; border-bottom: 2px solid var(--md-outline-variant); margin-bottom: 20px; gap: 0; overflow-x: auto; }
+  .tab {
+    padding: 12px 20px; cursor: pointer;
+    font-family: 'Google Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--md-on-surface-variant);
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: all var(--transition);
+    white-space: nowrap;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--md-primary); background: var(--md-primary-container); }
+  .tab.active { color: var(--md-primary); border-bottom-color: var(--md-primary); }
+
+  /* ── PROGRESS RING ── */
+  .progress-ring-wrap { position: relative; width: 80px; height: 80px; }
+  .progress-ring-svg { transform: rotate(-90deg); }
+  .progress-ring-bg { fill: none; stroke: var(--md-outline); stroke-width: 6; }
+  .progress-ring-fill { fill: none; stroke: var(--md-primary); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+  .progress-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Google Sans', sans-serif; }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .toggle-label { font-size: 14px; }
+  .toggle { position: relative; width: 48px; height: 28px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--md-outline);
+    border-radius: 14px; cursor: pointer;
+    transition: background var(--transition);
+  }
+  .toggle-slider:before {
+    content: ''; position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: white;
+    left: 4px; top: 4px;
+    transition: transform var(--transition);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--md-primary); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--md-outline-variant); margin: 16px 0; }
+
+  /* Info box */
+  .info-box {
+    background: var(--md-primary-container); border: 1px solid var(--md-primary);
+    border-radius: var(--radius-md); padding: 12px 16px;
+    font-size: 13px; color: var(--md-on-primary-container);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .info-box .material-icons-round { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  .warning-box {
+    background: var(--md-tertiary-container); border: 1px solid var(--md-tertiary);
+    border-radius: var(--radius-md); padding: 12px 16px;
+    font-size: 13px; color: #7b3800;
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .warning-box .material-icons-round { font-size: 18px; flex-shrink: 0; }
+
+  .store-section-header {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 18px; font-weight: 600;
+    padding: 12px 0 8px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 2px solid var(--md-outline-variant);
+    margin-bottom: 12px;
+  }
+
+  .day-tab-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+  .day-tab {
+    padding: 6px 14px; border-radius: var(--radius-xl);
+    font-size: 13px; font-family: 'Google Sans', sans-serif; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--md-outline);
+    background: var(--md-surface-container); color: var(--md-on-surface);
+    transition: all var(--transition);
+  }
+  .day-tab.active { background: var(--md-primary); color: white; border-color: var(--md-primary); }
+
+  /* color swatches */
+  .color-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch {
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: border-color var(--transition);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .swatch.selected { border-color: var(--md-on-surface); }
+
+  .emp-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 14px; font-weight: 700;
+    font-family: 'Google Sans', sans-serif;
+    flex-shrink: 0;
+  }
+</style>
+  <!-- PWA -->
+  <meta name="theme-color" content="#1a73e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Schedy">
+  <meta name="description" content="Smart multi-store retail scheduling">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+<!-- TOP APP BAR -->
+<header class="top-app-bar">
+  <div class="app-logo">
+    <div class="app-logo-icon"><span class="material-icons-round">schedule</span></div>
+    <div>
+      <div class="app-title">Schedy <span>Alpha</span></div>
+    </div>
+  </div>
+  <div class="top-bar-actions">
+    <button class="btn btn-outlined btn-sm" onclick="exportData()">
+      <span class="material-icons-round">download</span> Export JSON
+    </button>
+    <label class="btn btn-tonal btn-sm" style="cursor:pointer">
+      <span class="material-icons-round">upload</span> Import JSON
+      <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+    </label>
+  </div>
+</header>
+
+<div class="app-layout">
+
+<!-- NAV RAIL -->
+<nav class="nav-rail">
+  <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+    <span class="material-icons-round">dashboard</span>Dashboard
+  </button>
+  <button class="nav-item" onclick="showPage('stores')" id="nav-stores">
+    <span class="material-icons-round">store</span>Stores
+  </button>
+  <button class="nav-item" onclick="showPage('employees')" id="nav-employees">
+    <span class="material-icons-round">people</span>Staff
+  </button>
+  <button class="nav-item" onclick="showPage('schedule')" id="nav-schedule">
+    <span class="material-icons-round">calendar_month</span>Schedule
+  </button>
+  <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
+    <span class="material-icons-round">tune</span>Settings
+  </button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main-content">
+
+  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+  <div class="page active" id="page-dashboard">
+    <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">dashboard</span>Dashboard</div>
+    <div class="section-sub">Overview of all stores, staff, and schedule status.</div>
+
+    <div id="dashboard-stats" class="stats-row"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="dashboard-cards">
+    </div>
+  </div>
+
+  <!-- ═══════════════════ STORES ═══════════════════ -->
+  <div class="page" id="page-stores">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">store</span>Stores</div>
+      <button class="btn btn-filled" onclick="openStoreDialog()">
+        <span class="material-icons-round">add</span> Add Store
+      </button>
+    </div>
+    <div class="section-sub">Manage store locations, hours, and weekly payroll budgets.</div>
+
+    <div id="stores-list"></div>
+  </div>
+
+  <!-- ═══════════════════ EMPLOYEES ═══════════════════ -->
+  <div class="page" id="page-employees">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">people</span>Staff</div>
+      <button class="btn btn-filled" onclick="openEmployeeDialog()">
+        <span class="material-icons-round">person_add</span> Add Employee
+      </button>
+    </div>
+    <div class="section-sub">Manage associates, wages, availability, and store assignments.</div>
+
+    <div id="employees-list"></div>
+  </div>
+
+  <!-- ═══════════════════ SCHEDULE ═══════════════════ -->
+  <div class="page" id="page-schedule">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">calendar_month</span>Schedule</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-tonal" onclick="previousWeek()"><span class="material-icons-round">chevron_left</span></button>
+        <div class="week-display" id="week-display">Week of ...</div>
+        <button class="btn btn-tonal" onclick="nextWeek()"><span class="material-icons-round">chevron_right</span></button>
+        <button class="btn btn-outlined btn-sm" onclick="goToToday()"><span class="material-icons-round">today</span>Today</button>
+        <button class="btn btn-filled" onclick="generateSchedule()">
+          <span class="material-icons-round">auto_awesome</span> Generate Schedule
+        </button>
+        <button class="btn btn-tonal" onclick="exportSchedulePDF()">
+          <span class="material-icons-round">print</span> Print
+        </button>
+      </div>
+    </div>
+    <div class="section-sub">AI-optimized shifts within payroll budget. Shifts staggered per your rules.</div>
+
+    <div id="schedule-store-tabs" class="tab-bar"></div>
+    <div id="schedule-day-tabs" class="day-tab-row"></div>
+    <div id="schedule-content"></div>
+  </div>
+
+  <!-- ═══════════════════ SETTINGS ═══════════════════ -->
+  <div class="page" id="page-settings">
+    <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">tune</span>Settings</div>
+    <div class="section-sub">Configure staggering rules, schedule generation preferences, and defaults.</div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--md-primary-container);color:var(--md-primary)"><span class="material-icons-round">schedule</span></div>
+        <div><div class="card-title">Staggering Rules</div><div class="card-subtitle">Control how overlapping shifts are created</div></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">First Employee Alone (hours before 2nd arrives)</label>
+          <select class="form-select" id="stagger-alone" onchange="saveSettings()">
+            <option value="2">2 hours</option>
+            <option value="3" selected>3 hours</option>
+            <option value="4">4 hours</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stagger Interval Between Subsequent Employees</label>
+          <select class="form-select" id="stagger-interval" onchange="saveSettings()">
+            <option value="1">1 hour</option>
+            <option value="2" selected>2 hours</option>
+            <option value="3">3 hours</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Overlap Buffer (minutes before closing for last shift end)</label>
+          <select class="form-select" id="overlap-buffer" onchange="saveSettings()">
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">1 hour</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lunch Break Trigger (hours)</label>
+          <select class="form-select" id="lunch-trigger" onchange="saveSettings()">
+            <option value="5">5 hours</option>
+            <option value="6" selected>6 hours</option>
+            <option value="7">7 hours</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--md-secondary-container);color:var(--md-secondary)"><span class="material-icons-round">auto_awesome</span></div>
+        <div><div class="card-title">Generation Preferences</div><div class="card-subtitle">How the schedule optimizer works</div></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Prefer full-time employees over part-time when filling shifts</span>
+        <label class="toggle"><input type="checkbox" id="pref-fulltime" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+      </div>
+      <hr class="divider">
+      <div class="toggle-row">
+        <span class="toggle-label">Allow employees to float across stores in the same week</span>
+        <label class="toggle"><input type="checkbox" id="pref-float" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+      </div>
+      <hr class="divider">
+      <div class="toggle-row">
+        <span class="toggle-label">Spread hours evenly across the week (vs front-loaded)</span>
+        <label class="toggle"><input type="checkbox" id="pref-spread" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+      </div>
+      <hr class="divider">
+      <div class="toggle-row">
+        <span class="toggle-label">Try to give consecutive days off</span>
+        <label class="toggle"><input type="checkbox" id="pref-consec" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--md-tertiary-container);color:var(--md-tertiary)"><span class="material-icons-round">palette</span></div>
+        <div><div class="card-title">About Schedy</div><div class="card-subtitle">Version info</div></div>
+      </div>
+      <p style="font-size:14px;color:var(--md-on-surface-variant)">Schedy (Alpha) — Smart multi-store retail scheduling.<br>Built with Material Design 3. All data stays in your browser.<br><br>Features: Multi-store budgets · Float staff · Payroll optimization · Lunch-break deduction · Stagger rules · JSON persistence.</p>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ═══════════════ STORE DIALOG ═══════════════ -->
+<div class="dialog-backdrop" id="store-dialog">
+  <div class="dialog" style="max-width:640px">
+    <div class="dialog-title"><span class="material-icons-round" style="color:var(--md-primary)">store</span><span id="store-dialog-title">Add Store</span></div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Store Name *</label>
+        <input class="form-input" id="store-name" placeholder="e.g. Downtown Location" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weekly Payroll Budget ($) *</label>
+        <input class="form-input" id="store-budget" placeholder="e.g. 4000" type="number" min="0">
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="form-label" style="margin-bottom:10px">Store Color</div>
+      <div class="color-swatches" id="store-color-swatches"></div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-bottom:12px">Store Hours</div>
+    <div class="info-box" style="margin-bottom:14px">
+      <span class="material-icons-round">info</span>
+      Set open/close times for each day. Leave unchecked for days the store is closed.
+    </div>
+
+    <div id="store-hours-editor"></div>
+
+    <div class="dialog-actions">
+      <button class="btn btn-outlined" onclick="closeDialog('store-dialog')">Cancel</button>
+      <button class="btn btn-filled" onclick="saveStore()">Save Store</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ EMPLOYEE DIALOG ═══════════════ -->
+<div class="dialog-backdrop" id="employee-dialog">
+  <div class="dialog" style="max-width:680px">
+    <div class="dialog-title"><span class="material-icons-round" style="color:var(--md-primary)">person</span><span id="emp-dialog-title">Add Employee</span></div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input class="form-input" id="emp-name" placeholder="e.g. Alex Johnson" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hourly Wage ($) *</label>
+        <input class="form-input" id="emp-wage" placeholder="e.g. 15.50" type="number" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-group">
+        <label class="form-label">Min Weekly Hours</label>
+        <input class="form-input" id="emp-min-weekly" placeholder="e.g. 20" type="number" min="0" value="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Max Weekly Hours</label>
+        <input class="form-input" id="emp-max-weekly" placeholder="e.g. 40" type="number" min="0" value="40">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Min Daily Hours</label>
+        <input class="form-input" id="emp-min-daily" placeholder="e.g. 4" type="number" min="0" value="4">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Max Daily Hours</label>
+        <input class="form-input" id="emp-max-daily" placeholder="e.g. 10" type="number" min="0" value="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Days Off Per Week</label>
+        <select class="form-select" id="emp-days-off">
+          <option value="1">1 day off</option>
+          <option value="2" selected>2 days off</option>
+          <option value="3">3 days off</option>
+          <option value="4">4 days off</option>
+          <option value="5">5 days off</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-bottom:10px">Allowed Stores</div>
+    <div class="checkbox-group" id="emp-stores-checkboxes"></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-bottom:10px">Availability</div>
+    <div class="info-box" style="margin-bottom:12px"><span class="material-icons-round">info</span>Check days this employee is available to work.</div>
+    <div class="checkbox-group" id="emp-availability"></div>
+
+    <div class="dialog-actions">
+      <button class="btn btn-outlined" onclick="closeDialog('employee-dialog')">Cancel</button>
+      <button class="btn btn-filled" onclick="saveEmployee()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  DATA MODEL
+// ══════════════════════════════════════════════════════
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const STORE_COLORS = ['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#1e88e5','#00897b','#f4511e','#7b1fa2','#c62828','#2e7d32','#0277bd'];
+
+let state = {
+  stores: [],
+  employees: [],
+  schedules: {}, // { "weekKey": { storeId: { day: [ {empId, start, end, lunchBreak} ] } } }
+  settings: {
+    staggerAlone: 3,
+    staggerInterval: 2,
+    overlapBuffer: 30,
+    lunchTrigger: 6,
+    prefFulltime: true,
+    prefFloat: true,
+    prefSpread: true,
+    prefConsec: true
+  }
+};
+
+let editingStoreId = null;
+let editingEmpId = null;
+let currentWeekStart = getWeekStart(new Date());
+let currentStoreTab = null;
+let currentDayTab = 0;
+let selectedStoreColor = STORE_COLORS[0];
+
+// ── ID GENERATOR ──
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ── WEEK HELPERS ──
+function getWeekStart(d) {
+  const date = new Date(d);
+  date.setHours(0,0,0,0);
+  const day = date.getDay();
+  date.setDate(date.getDate() - day);
+  return date;
+}
+function weekKey(d) { return d.toISOString().slice(0,10); }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function fmtDateFull(d) { return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+
+// ── TIME HELPERS ──
+function timeToMinutes(t) { const [h,m]= t.split(':').map(Number); return h*60+m; }
+function minutesToTime(m) { const h=Math.floor(m/60),mn=m%60; return `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`; }
+function fmtTime(t) {
+  const [h,m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hr = h > 12 ? h-12 : (h===0?12:h);
+  return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+// ── AVATAR COLOR ──
+function avatarColor(name) {
+  const colors = ['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#2e7d32','#0277bd','#7b1fa2'];
+  let h = 0; for(const c of name) h = (h<<5)-h+c.charCodeAt(0);
+  return colors[Math.abs(h)%colors.length];
+}
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+// ══════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'stores') renderStores();
+  if (name === 'employees') renderEmployees();
+  if (name === 'schedule') renderSchedulePage();
+}
+
+// ══════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderDashboard() {
+  const wk = weekKey(currentWeekStart);
+  const sched = state.schedules[wk] || {};
+
+  // Stats
+  let totalBudget = state.stores.reduce((s,st)=>s+st.budget,0);
+  let totalPayroll = 0;
+  for(const st of state.stores) {
+    const ss = sched[st.id] || {};
+    for(const day of Object.values(ss)) for(const shift of day) {
+      const emp = state.employees.find(e=>e.id===shift.empId);
+      if(emp) totalPayroll += calcShiftPay(shift, emp.wage);
+    }
+  }
+  const budgetPct = totalBudget ? Math.round(totalPayroll/totalBudget*100) : 0;
+
+  document.getElementById('dashboard-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--md-primary-container);color:var(--md-primary)"><span class="material-icons-round">store</span></div>
+      <div><div class="stat-value">${state.stores.length}</div><div class="stat-label">Stores</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--md-secondary-container);color:var(--md-secondary)"><span class="material-icons-round">people</span></div>
+      <div><div class="stat-value">${state.employees.length}</div><div class="stat-label">Employees</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--md-tertiary-container);color:var(--md-tertiary)"><span class="material-icons-round">payments</span></div>
+      <div><div class="stat-value">$${totalBudget.toLocaleString()}</div><div class="stat-label">Weekly Budget</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:${budgetPct>100?'var(--md-error-container)':'var(--md-primary-container)'};color:${budgetPct>100?'var(--md-error)':'var(--md-primary)'}"><span class="material-icons-round">trending_up</span></div>
+      <div><div class="stat-value" style="color:${budgetPct>100?'var(--md-error)':'inherit'}">$${Math.round(totalPayroll).toLocaleString()}</div><div class="stat-label">Scheduled Payroll (${budgetPct}%)</div></div>
+    </div>
+  `;
+
+  // Store cards
+  let cardsHTML = '';
+  if(state.stores.length === 0) {
+    cardsHTML = `<div class="card" style="grid-column:1/-1">
+      <div class="empty-state"><span class="material-icons-round">store</span><h3>No stores yet</h3><p>Add a store to get started.</p><br><button class="btn btn-filled" onclick="showPage('stores')"><span class="material-icons-round">add</span> Add Store</button></div>
+    </div>`;
+  } else {
+    for(const store of state.stores) {
+      const ss = sched[store.id] || {};
+      let storePay = 0;
+      let shifts = 0;
+      for(const day of Object.values(ss)) for(const shift of day) {
+        const emp = state.employees.find(e=>e.id===shift.empId);
+        if(emp) storePay += calcShiftPay(shift, emp.wage);
+        shifts++;
+      }
+      const pct = store.budget ? Math.min(Math.round(storePay/store.budget*100),100) : 0;
+      const over = storePay > store.budget;
+      cardsHTML += `<div class="card">
+        <div class="card-header">
+          <div class="emp-avatar" style="background:${store.color};width:40px;height:40px;border-radius:12px;font-size:18px">${store.name.slice(0,2).toUpperCase()}</div>
+          <div>
+            <div class="card-title">${store.name}</div>
+            <div class="card-subtitle">${shifts} shifts scheduled this week</div>
+          </div>
+        </div>
+        <div class="payroll-bar-container">
+          <div class="payroll-labels"><span>$${Math.round(storePay).toLocaleString()} used</span><span>Budget: $${store.budget.toLocaleString()}</span></div>
+          <div class="payroll-bar-bg"><div class="payroll-bar-fill ${over?'over':pct>85?'close':''}" style="width:${Math.min(pct,100)}%"></div></div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-variant)">
+          ${(store.hours||[]).filter(h=>h.open).map(h=>`<span class="chip chip-surface" style="margin:2px">${DAY_SHORT[h.day]} ${fmtTime(h.openTime)}–${fmtTime(h.closeTime)}</span>`).join('')||'<span style="color:var(--md-on-surface-variant)">No hours set</span>'}
+        </div>
+      </div>`;
+    }
+  }
+  document.getElementById('dashboard-cards').innerHTML = cardsHTML;
+}
+
+// ══════════════════════════════════════════════════════
+//  STORES PAGE
+// ══════════════════════════════════════════════════════
+function renderStores() {
+  const el = document.getElementById('stores-list');
+  if(!state.stores.length) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">store</span><h3>No stores added yet</h3><p>Click "Add Store" to create your first location.</p></div></div>`;
+    return;
+  }
+  el.innerHTML = state.stores.map(store => {
+    const empCount = state.employees.filter(e=>e.storeIds&&e.storeIds.includes(store.id)).length;
+    const daysHtml = (store.hours||[]).map(h => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--md-outline-variant)">
+        <span style="width:80px;font-size:13px;font-weight:500;font-family:'Google Sans',sans-serif">${DAYS[h.day]}</span>
+        ${h.open
+          ? `<span class="chip chip-secondary"><span class="material-icons-round" style="font-size:14px">schedule</span>${fmtTime(h.openTime)} – ${fmtTime(h.closeTime)}</span>`
+          : `<span class="chip chip-surface">Closed</span>`
+        }
+      </div>
+    `).join('');
+    return `<div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="emp-avatar" style="background:${store.color};width:48px;height:48px;border-radius:14px;font-size:22px;flex-shrink:0">${store.name.slice(0,2).toUpperCase()}</div>
+          <div>
+            <div style="font-family:'Google Sans',sans-serif;font-size:18px;font-weight:600">${store.name}</div>
+            <div style="font-size:13px;color:var(--md-on-surface-variant);margin-top:2px">Weekly Budget: <strong>$${store.budget.toLocaleString()}</strong> · ${empCount} staff assigned</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-icon" onclick="openStoreDialog('${store.id}')"><span class="material-icons-round">edit</span></button>
+          <button class="btn-icon" onclick="deleteStore('${store.id}')" style="color:var(--md-error)"><span class="material-icons-round">delete</span></button>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="card-title" style="margin-bottom:10px">Store Hours</div>
+      ${daysHtml}
+    </div>`;
+  }).join('');
+}
+
+function openStoreDialog(storeId=null) {
+  editingStoreId = storeId;
+  const store = storeId ? state.stores.find(s=>s.id===storeId) : null;
+  document.getElementById('store-dialog-title').textContent = store ? 'Edit Store' : 'Add Store';
+  document.getElementById('store-name').value = store?.name || '';
+  document.getElementById('store-budget').value = store?.budget || '';
+
+  // Color swatches
+  selectedStoreColor = store?.color || STORE_COLORS[0];
+  document.getElementById('store-color-swatches').innerHTML = STORE_COLORS.map(c =>
+    `<div class="swatch ${c===selectedStoreColor?'selected':''}" style="background:${c}" onclick="selectStoreColor('${c}')"></div>`
+  ).join('');
+
+  // Hours editor
+  const existing = store?.hours || DAYS.map((_,i)=>({day:i,open:false,openTime:'09:00',closeTime:'21:00'}));
+  document.getElementById('store-hours-editor').innerHTML = existing.map((h,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--md-outline-variant)">
+      <label class="checkbox-chip ${h.open?'checked':''}" style="width:90px;justify-content:center" onclick="toggleDayOpen(${i})">
+        <input type="checkbox" ${h.open?'checked':''} id="day-open-${i}"> ${DAYS[i].slice(0,3)}
+      </label>
+      <div style="display:flex;gap:8px;flex:1">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Open</label>
+          <input class="form-input" type="time" id="day-open-${i}-open" value="${h.openTime}" ${h.open?'':'disabled'} oninput="syncHourInputs()">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Close</label>
+          <input class="form-input" type="time" id="day-open-${i}-close" value="${h.closeTime}" ${h.open?'':'disabled'} oninput="syncHourInputs()">
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('store-dialog').classList.add('open');
+}
+
+function toggleDayOpen(i) {
+  const cb = document.getElementById(`day-open-${i}`);
+  cb.checked = !cb.checked;
+  const chip = cb.closest('.checkbox-chip');
+  chip.classList.toggle('checked', cb.checked);
+  document.getElementById(`day-open-${i}-open`).disabled = !cb.checked;
+  document.getElementById(`day-open-${i}-close`).disabled = !cb.checked;
+}
+function syncHourInputs() {} // placeholder
+
+function selectStoreColor(c) {
+  selectedStoreColor = c;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.style.background===c));
+}
+
+function saveStore() {
+  const name = document.getElementById('store-name').value.trim();
+  const budget = parseFloat(document.getElementById('store-budget').value);
+  if(!name) { toast('Store name required','error'); return; }
+  if(isNaN(budget)||budget<0) { toast('Valid budget required','error'); return; }
+
+  const hours = DAYS.map((_,i)=>({
+    day: i,
+    open: document.getElementById(`day-open-${i}`)?.checked||false,
+    openTime: document.getElementById(`day-open-${i}-open`)?.value||'09:00',
+    closeTime: document.getElementById(`day-open-${i}-close`)?.value||'21:00'
+  }));
+
+  if(editingStoreId) {
+    const s = state.stores.find(s=>s.id===editingStoreId);
+    s.name=name; s.budget=budget; s.hours=hours; s.color=selectedStoreColor;
+  } else {
+    state.stores.push({id:uid(),name,budget,hours,color:selectedStoreColor});
+  }
+  saveData();
+  closeDialog('store-dialog');
+  renderStores();
+  toast(editingStoreId?'Store updated':'Store added','success');
+}
+
+function deleteStore(id) {
+  if(!confirm('Delete this store? This will remove all associated schedule data.')) return;
+  state.stores = state.stores.filter(s=>s.id!==id);
+  state.employees.forEach(e=>{if(e.storeIds)e.storeIds=e.storeIds.filter(s=>s!==id)});
+  Object.values(state.schedules).forEach(wk=>{delete wk[id]});
+  saveData(); renderStores(); toast('Store deleted');
+}
+
+// ══════════════════════════════════════════════════════
+//  EMPLOYEES PAGE
+// ══════════════════════════════════════════════════════
+function renderEmployees() {
+  const el = document.getElementById('employees-list');
+  if(!state.employees.length) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">people</span><h3>No employees added yet</h3><p>Click "Add Employee" to add your first staff member.</p></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr>
+        <th>Employee</th><th>Wage</th><th>Hours/wk</th><th>Hours/day</th><th>Days Off</th><th>Stores</th><th>Availability</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${state.employees.map(emp=>{
+          const stores = (emp.storeIds||[]).map(sid=>{
+            const s = state.stores.find(st=>st.id===sid);
+            return s?`<span class="store-pill" style="background:${s.color}">${s.name}</span>`:''
+          }).join(' ');
+          const avail = (emp.availability||[]).map(d=>DAY_SHORT[d]).join(', ') || 'None';
+          return `<tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="emp-avatar" style="background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
+                <div>
+                  <div style="font-weight:500;font-family:'Google Sans',sans-serif">${emp.name}</div>
+                  <div style="font-size:11px;color:var(--md-on-surface-variant)">${emp.daysOff||2} day(s) off/wk</div>
+                </div>
+              </div>
+            </td>
+            <td>$${parseFloat(emp.wage).toFixed(2)}/hr</td>
+            <td>${emp.minWeekly}–${emp.maxWeekly}h</td>
+            <td>${emp.minDaily}–${emp.maxDaily}h</td>
+            <td>${emp.daysOff||2}</td>
+            <td>${stores||'<span style="color:var(--md-on-surface-variant)">None</span>'}</td>
+            <td><span style="font-size:12px">${avail}</span></td>
+            <td>
+              <div style="display:flex;gap:4px">
+                <button class="btn-icon" onclick="openEmployeeDialog('${emp.id}')"><span class="material-icons-round">edit</span></button>
+                <button class="btn-icon" onclick="deleteEmployee('${emp.id}')" style="color:var(--md-error)"><span class="material-icons-round">delete</span></button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function openEmployeeDialog(empId=null) {
+  editingEmpId = empId;
+  const emp = empId ? state.employees.find(e=>e.id===empId) : null;
+  document.getElementById('emp-dialog-title').textContent = emp ? 'Edit Employee' : 'Add Employee';
+
+  document.getElementById('emp-name').value = emp?.name||'';
+  document.getElementById('emp-wage').value = emp?.wage||'';
+  document.getElementById('emp-min-weekly').value = emp?.minWeekly??20;
+  document.getElementById('emp-max-weekly').value = emp?.maxWeekly??40;
+  document.getElementById('emp-min-daily').value = emp?.minDaily??4;
+  document.getElementById('emp-max-daily').value = emp?.maxDaily??10;
+  document.getElementById('emp-days-off').value = emp?.daysOff??2;
+
+  // Store checkboxes
+  document.getElementById('emp-stores-checkboxes').innerHTML = state.stores.length
+    ? state.stores.map(s=>`
+      <label class="checkbox-chip ${(emp?.storeIds||[]).includes(s.id)?'checked':''}">
+        <input type="checkbox" value="${s.id}" ${(emp?.storeIds||[]).includes(s.id)?'checked':''}
+          onchange="this.closest('.checkbox-chip').classList.toggle('checked',this.checked)">
+        <span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block"></span>
+        ${s.name}
+      </label>`).join('')
+    : '<span style="color:var(--md-on-surface-variant);font-size:13px">No stores created yet</span>';
+
+  // Availability
+  document.getElementById('emp-availability').innerHTML = DAYS.map((d,i)=>`
+    <label class="checkbox-chip ${(emp?.availability||[]).includes(i)?'checked':''}">
+      <input type="checkbox" value="${i}" ${(emp?.availability||[]).includes(i)?'checked':''}
+        onchange="this.closest('.checkbox-chip').classList.toggle('checked',this.checked)">
+      ${d.slice(0,3)}
+    </label>`).join('');
+
+  document.getElementById('employee-dialog').classList.add('open');
+}
+
+function saveEmployee() {
+  const name = document.getElementById('emp-name').value.trim();
+  const wage = parseFloat(document.getElementById('emp-wage').value);
+  if(!name) { toast('Name required','error'); return; }
+  if(isNaN(wage)||wage<0) { toast('Valid wage required','error'); return; }
+
+  const storeIds = [...document.querySelectorAll('#emp-stores-checkboxes input:checked')].map(i=>i.value);
+  const availability = [...document.querySelectorAll('#emp-availability input:checked')].map(i=>parseInt(i.value));
+  const empData = {
+    name,wage,
+    minWeekly: parseInt(document.getElementById('emp-min-weekly').value)||20,
+    maxWeekly: parseInt(document.getElementById('emp-max-weekly').value)||40,
+    minDaily: parseInt(document.getElementById('emp-min-daily').value)||4,
+    maxDaily: parseInt(document.getElementById('emp-max-daily').value)||10,
+    daysOff: parseInt(document.getElementById('emp-days-off').value)||2,
+    storeIds, availability
+  };
+
+  if(editingEmpId) {
+    const e = state.employees.find(e=>e.id===editingEmpId);
+    Object.assign(e, empData);
+  } else {
+    state.employees.push({id:uid(),...empData});
+  }
+  saveData(); closeDialog('employee-dialog'); renderEmployees();
+  toast(editingEmpId?'Employee updated':'Employee added','success');
+}
+
+function deleteEmployee(id) {
+  if(!confirm('Delete this employee?')) return;
+  state.employees = state.employees.filter(e=>e.id!==id);
+  Object.values(state.schedules).forEach(wk=>{
+    Object.values(wk).forEach(store=>{
+      Object.keys(store).forEach(day=>{store[day]=(store[day]||[]).filter(s=>s.empId!==id)});
+    });
+  });
+  saveData(); renderEmployees(); toast('Employee deleted');
+}
+
+// ══════════════════════════════════════════════════════
+//  SCHEDULE PAGE
+// ══════════════════════════════════════════════════════
+function renderSchedulePage() {
+  updateWeekDisplay();
+  renderStoreTabs();
+  renderDayTabs();
+  renderScheduleContent();
+}
+
+function updateWeekDisplay() {
+  const end = addDays(currentWeekStart, 6);
+  document.getElementById('week-display').textContent = `${fmtDate(currentWeekStart)} – ${fmtDate(end)}`;
+}
+
+function previousWeek() { currentWeekStart = addDays(currentWeekStart,-7); renderSchedulePage(); }
+function nextWeek() { currentWeekStart = addDays(currentWeekStart,7); renderSchedulePage(); }
+function goToToday() { currentWeekStart = getWeekStart(new Date()); currentDayTab=new Date().getDay(); renderSchedulePage(); }
+
+function renderStoreTabs() {
+  const el = document.getElementById('schedule-store-tabs');
+  if(!state.stores.length) { el.innerHTML=''; return; }
+  if(!currentStoreTab || !state.stores.find(s=>s.id===currentStoreTab)) currentStoreTab = state.stores[0].id;
+  el.innerHTML = `<button class="tab ${currentStoreTab==='all'?'active':''}" onclick="setStoreTab('all')">All Stores</button>`
+    + state.stores.map(s=>`<button class="tab ${currentStoreTab===s.id?'active':''}" onclick="setStoreTab('${s.id}')">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px"></span>${s.name}
+    </button>`).join('');
+}
+
+function setStoreTab(id) { currentStoreTab=id; renderStoreTabs(); renderScheduleContent(); }
+
+function renderDayTabs() {
+  const el = document.getElementById('schedule-day-tabs');
+  el.innerHTML = DAY_SHORT.map((d,i)=>{
+    const date = addDays(currentWeekStart,i);
+    return `<button class="day-tab ${currentDayTab===i?'active':''}" onclick="setDayTab(${i})">
+      ${d} <span style="font-size:11px;display:block">${fmtDate(date)}</span>
+    </button>`;
+  }).join('');
+}
+function setDayTab(i) { currentDayTab=i; renderDayTabs(); renderScheduleContent(); }
+
+function calcShiftPay(shift, wage) {
+  const mins = timeToMinutes(shift.end) - timeToMinutes(shift.start);
+  const hours = mins/60 - (shift.lunchBreak?0.5:0);
+  return Math.max(0,hours) * parseFloat(wage);
+}
+
+function renderScheduleContent() {
+  const el = document.getElementById('schedule-content');
+  const wk = weekKey(currentWeekStart);
+  const sched = state.schedules[wk] || {};
+  const storeIds = currentStoreTab==='all' ? state.stores.map(s=>s.id) : [currentStoreTab];
+
+  if(!state.stores.length) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">store</span><h3>No stores yet</h3><p>Add stores first.</p></div></div>`;
+    return;
+  }
+
+  let html = '';
+  let hasAnyShift = false;
+
+  for(const storeId of storeIds) {
+    const store = state.stores.find(s=>s.id===storeId);
+    if(!store) continue;
+    const storeSched = sched[storeId] || {};
+    const dayShifts = storeSched[currentDayTab] || [];
+    const storeHours = (store.hours||[]).find(h=>h.day===currentDayTab);
+
+    if(!storeHours?.open) {
+      if(storeIds.length===1) {
+        html += `<div class="card"><div class="empty-state"><span class="material-icons-round">store_mall_directory</span><h3>${store.name} is closed ${DAYS[currentDayTab]}</h3><p>No shifts needed.</p></div></div>`;
+      }
+      continue;
+    }
+
+    if(dayShifts.length>0) hasAnyShift=true;
+
+    // Compute timeline range
+    const openMin = timeToMinutes(storeHours.openTime);
+    const closeMin = timeToMinutes(storeHours.closeTime);
+    const totalMins = closeMin - openMin;
+
+    // Payroll for this store this day
+    let dayPay = 0;
+    for(const sh of dayShifts) {
+      const emp = state.employees.find(e=>e.id===sh.empId);
+      if(emp) dayPay += calcShiftPay(sh,emp.wage);
+    }
+
+    html += `<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+      <div style="padding:14px 16px;background:${store.color};color:white;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:'Google Sans',sans-serif;font-weight:600;font-size:16px">${store.name} — ${DAYS[currentDayTab]}</div>
+        <div style="font-size:13px">${fmtTime(storeHours.openTime)} – ${fmtTime(storeHours.closeTime)} · ${dayShifts.length} shifts · $${dayPay.toFixed(2)} payroll</div>
+      </div>`;
+
+    if(!dayShifts.length) {
+      html += `<div style="padding:32px;text-align:center;color:var(--md-on-surface-variant)"><span class="material-icons-round" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4">event_busy</span>No shifts scheduled. Click "Generate Schedule".</div>`;
+    } else {
+      // Timeline
+      const hourLabels = [];
+      for(let m=openMin;m<=closeMin;m+=60) hourLabels.push(m);
+      const hoursRange = (closeMin-openMin)/60;
+
+      html += `<div class="schedule-container"><div class="schedule-grid">
+        <div class="schedule-header-row">
+          <div class="schedule-emp-col">Employee</div>
+          <div class="schedule-hours">
+            ${hourLabels.map(m=>`<div class="hour-tick">${fmtTime(minutesToTime(m))}</div>`).join('')}
+          </div>
+        </div>`;
+
+      for(const shift of dayShifts) {
+        const emp = state.employees.find(e=>e.id===shift.empId);
+        if(!emp) continue;
+        const startM = timeToMinutes(shift.start);
+        const endM = timeToMinutes(shift.end);
+        const leftPct = ((startM-openMin)/totalMins)*100;
+        const widthPct = ((endM-startM)/totalMins)*100;
+        const color = avatarColor(emp.name);
+        const pay = calcShiftPay(shift,emp.wage);
+
+        // Lunch position (halfway)
+        let lunchHtml = '';
+        if(shift.lunchBreak) {
+          const lunchStart = startM + (endM-startM)/2 - 15;
+          const lunchLeft = ((lunchStart-openMin)/totalMins)*100;
+          const lunchW = (30/totalMins)*100;
+          lunchHtml = `<div class="lunch-block" style="left:${lunchLeft}%;width:${lunchW}%" title="30 min lunch">L</div>`;
+        }
+
+        html += `<div class="schedule-row">
+          <div class="schedule-emp-name">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="emp-avatar" style="background:${color};width:28px;height:28px;font-size:12px">${initials(emp.name)}</div>
+              <div>
+                <div>${emp.name}</div>
+                <div class="schedule-emp-store">$${pay.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="schedule-timeline">
+            ${hourLabels.map((m,i)=>`<div class="hour-line" style="left:${(i/(hourLabels.length-1))*100}%"></div>`).join('')}
+            <div class="shift-block" style="left:${leftPct}%;width:${widthPct}%;background:${color}" title="${emp.name}: ${fmtTime(shift.start)}–${fmtTime(shift.end)}${shift.lunchBreak?' (30m lunch)':''}">
+              ${fmtTime(shift.start)}–${fmtTime(shift.end)}
+            </div>
+            ${lunchHtml}
+          </div>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+  }
+
+  if(!html) {
+    html = `<div class="card"><div class="empty-state"><span class="material-icons-round">calendar_today</span><h3>Nothing to show</h3><p>Select a store tab or generate a schedule.</p></div></div>`;
+  } else if(!hasAnyShift && state.employees.length) {
+    html = `<div class="warning-box"><span class="material-icons-round">warning</span><div><strong>No schedule generated yet for this week.</strong><br>Click "Generate Schedule" to auto-create optimized shifts based on store hours, employee availability, and payroll budgets.</div></div>` + html;
+  }
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+//  SCHEDULE GENERATION ENGINE
+// ══════════════════════════════════════════════════════
+function generateSchedule() {
+  if(!state.stores.length) { toast('Add stores first','error'); return; }
+  if(!state.employees.length) { toast('Add employees first','error'); return; }
+
+  const wk = weekKey(currentWeekStart);
+  const settings = state.settings;
+  const staggerAlone = parseInt(settings.staggerAlone)||3;
+  const staggerInterval = parseInt(settings.staggerInterval)||2;
+  const lunchTrigger = parseFloat(settings.lunchTrigger)||6;
+
+  // Initialize schedule for this week
+  const newSched = {};
+
+  // Track weekly hours per employee
+  const empWeeklyHours = {};
+  const empWeeklyPay = {};
+  const empDaysWorked = {};
+  state.employees.forEach(e=>{empWeeklyHours[e.id]=0;empWeeklyPay[e.id]=0;empDaysWorked[e.id]=[];});
+
+  // For each store, for each day, generate shifts
+  for(const store of state.stores) {
+    newSched[store.id] = {};
+    let storeBudgetUsed = 0;
+    const remaining = store.budget;
+
+    for(let day=0; day<7; day++) {
+      const storeHours = (store.hours||[]).find(h=>h.day===day);
+      if(!storeHours?.open) continue;
+
+      const openMin = timeToMinutes(storeHours.openTime);
+      const closeMin = timeToMinutes(storeHours.closeTime);
+      const storeLen = closeMin - openMin; // minutes store is open
+
+      // Get eligible employees for this store & day
+      const eligibleEmps = state.employees.filter(emp => {
+        if(!(emp.storeIds||[]).includes(store.id)) return false;
+        if(!(emp.availability||[]).includes(day)) return false;
+        const daysOff = emp.daysOff||2;
+        const daysCanWork = 7 - daysOff;
+        if((emp.daysWorked||empDaysWorked[emp.id]||[]).length >= daysCanWork) return false;
+        if(empWeeklyHours[emp.id] >= emp.maxWeekly) return false;
+        return true;
+      });
+
+      if(!eligibleEmps.length) { newSched[store.id][day]=[]; continue; }
+
+      // Sort: prefer those with fewer hours scheduled (spreading)
+      eligibleEmps.sort((a,b)=>{
+        const ah = empWeeklyHours[a.id]; const bh = empWeeklyHours[b.id];
+        if(settings.prefFulltime) {
+          const aFull = a.maxWeekly>=35; const bFull = b.maxWeekly>=35;
+          if(aFull!==bFull) return aFull?-1:1;
+        }
+        return ah-bh;
+      });
+
+      const shifts = [];
+      // Determine how many employees to schedule
+      // First employee: open to close (or max daily)
+      // Subsequent: staggered
+
+      let empIdx = 0;
+      let currentStart = openMin;
+
+      while(currentStart < closeMin && empIdx < eligibleEmps.length && storeBudgetUsed < remaining) {
+        const emp = eligibleEmps[empIdx];
+        const shiftStart = empIdx===0 ? openMin : openMin + staggerAlone*60 + (empIdx-1)*staggerInterval*60;
+        if(shiftStart >= closeMin) break;
+
+        // Calc max shift end based on store close & employee max daily hours
+        const maxEnd = Math.min(closeMin, shiftStart + emp.maxDaily*60);
+        const minEnd = Math.min(closeMin, shiftStart + emp.minDaily*60);
+        let shiftEnd = maxEnd;
+
+        // Check hours budget
+        let shiftMins = shiftEnd - shiftStart;
+        let shiftHours = shiftMins/60;
+        const lunchBreak = shiftHours > lunchTrigger;
+        if(lunchBreak) shiftHours -= 0.5;
+
+        // Check weekly budget
+        const shiftPay = shiftHours * parseFloat(emp.wage);
+        if(storeBudgetUsed + shiftPay > remaining * 1.02) {
+          // Try shorter shift
+          const affordableHours = (remaining - storeBudgetUsed) / parseFloat(emp.wage);
+          if(affordableHours < emp.minDaily) { empIdx++; continue; }
+          shiftHours = Math.min(affordableHours, emp.maxDaily);
+          shiftEnd = Math.min(closeMin, shiftStart + Math.round(shiftHours*60));
+          shiftMins = shiftEnd - shiftStart;
+          shiftHours = shiftMins/60;
+        }
+
+        // Check employee weekly hours
+        const newTotal = empWeeklyHours[emp.id] + shiftHours;
+        if(newTotal > emp.maxWeekly) {
+          const canWork = emp.maxWeekly - empWeeklyHours[emp.id];
+          if(canWork < emp.minDaily) { empIdx++; continue; }
+          shiftEnd = Math.min(closeMin, shiftStart + Math.round(canWork*60));
+          shiftMins = shiftEnd - shiftStart;
+          shiftHours = shiftMins/60 - (shiftMins/60>lunchTrigger?0.5:0);
+        }
+
+        if(shiftEnd <= shiftStart || shiftMins < emp.minDaily*60) { empIdx++; continue; }
+
+        const finalPay = shiftHours * parseFloat(emp.wage);
+        const doLunch = (shiftMins/60) > lunchTrigger;
+
+        shifts.push({
+          empId: emp.id,
+          start: minutesToTime(shiftStart),
+          end: minutesToTime(shiftEnd),
+          lunchBreak: doLunch
+        });
+
+        storeBudgetUsed += finalPay;
+        empWeeklyHours[emp.id] += shiftMins/60 - (doLunch?0.5:0);
+        empWeeklyPay[emp.id] += finalPay;
+        empDaysWorked[emp.id].push(day);
+
+        empIdx++;
+
+        // Stop adding employees if store is covered for full hours
+        // Add one more for lunch overlap coverage
+        const coverMins = shifts.reduce((s,sh)=>{
+          return s + (timeToMinutes(sh.end)-timeToMinutes(sh.start));
+        },0);
+        if(coverMins >= storeLen * 1.5) break; // enough coverage
+      }
+
+      newSched[store.id][day] = shifts;
+    }
+  }
+
+  state.schedules[wk] = newSched;
+  saveData();
+  renderSchedulePage();
+  toast('Schedule generated successfully!','success');
+}
+
+// ══════════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════════
+function saveSettings() {
+  state.settings = {
+    staggerAlone: parseInt(document.getElementById('stagger-alone').value),
+    staggerInterval: parseInt(document.getElementById('stagger-interval').value),
+    overlapBuffer: parseInt(document.getElementById('overlap-buffer').value),
+    lunchTrigger: parseFloat(document.getElementById('lunch-trigger').value),
+    prefFulltime: document.getElementById('pref-fulltime').checked,
+    prefFloat: document.getElementById('pref-float').checked,
+    prefSpread: document.getElementById('pref-spread').checked,
+    prefConsec: document.getElementById('pref-consec').checked
+  };
+  saveData();
+}
+
+function loadSettingsUI() {
+  const s = state.settings;
+  const el = id => document.getElementById(id);
+  if(el('stagger-alone')) el('stagger-alone').value = s.staggerAlone||3;
+  if(el('stagger-interval')) el('stagger-interval').value = s.staggerInterval||2;
+  if(el('overlap-buffer')) el('overlap-buffer').value = s.overlapBuffer||30;
+  if(el('lunch-trigger')) el('lunch-trigger').value = s.lunchTrigger||6;
+  if(el('pref-fulltime')) el('pref-fulltime').checked = s.prefFulltime!==false;
+  if(el('pref-float')) el('pref-float').checked = s.prefFloat!==false;
+  if(el('pref-spread')) el('pref-spread').checked = s.prefSpread!==false;
+  if(el('pref-consec')) el('pref-consec').checked = s.prefConsec!==false;
+}
+
+// ══════════════════════════════════════════════════════
+//  PRINT / EXPORT SCHEDULE
+// ══════════════════════════════════════════════════════
+function exportSchedulePDF() {
+  window.print();
+}
+
+// ══════════════════════════════════════════════════════
+//  PERSISTENCE
+// ══════════════════════════════════════════════════════
+function saveData() {
+  try { localStorage.setItem('schedy_v1', JSON.stringify(state)); } catch(e){}
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem('schedy_v1');
+    if(raw) { const d=JSON.parse(raw); Object.assign(state,d); }
+  } catch(e){}
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`schedy-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Data exported!','success');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      Object.assign(state,d);
+      saveData(); loadSettingsUI();
+      showPage('dashboard');
+      toast('Data imported successfully!','success');
+    } catch {
+      toast('Invalid JSON file','error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// ══════════════════════════════════════════════════════
+//  DIALOG HELPERS
+// ══════════════════════════════════════════════════════
+function closeDialog(id) {
+  document.getElementById(id).classList.remove('open');
+}
+// Close on backdrop click
+document.querySelectorAll('.dialog-backdrop').forEach(bd=>{
+  bd.addEventListener('click', e=>{if(e.target===bd)bd.classList.remove('open');});
+});
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg, type='') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="material-icons-round" style="font-size:16px">${type==='success'?'check_circle':type==='error'?'error':'info'}</span>${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+loadData();
+loadSettingsUI();
+renderDashboard();
+
+// Set today's day tab
+currentDayTab = new Date().getDay();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js")
+      .then(r=>console.log("SW registered",r.scope))
+      .catch(e=>console.log("SW error",e));
+  });
+}
+</script>
+</body>
+</html>
