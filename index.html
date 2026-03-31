@@ -1,1718 +1,928 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="material-light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schedy (Alpha) — Smart Store Scheduling</title>
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@300;400;500&family=Material+Icons+Round" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Schedy Alpha</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@300;400;500" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<meta name="theme-color" content="#1a73e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Schedy">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root {
-    --md-primary: #1a73e8;
-    --md-primary-container: #d3e3fd;
-    --md-on-primary: #ffffff;
-    --md-on-primary-container: #041e49;
-    --md-secondary: #00695c;
-    --md-secondary-container: #b2dfdb;
-    --md-on-secondary: #ffffff;
-    --md-tertiary: #e8710a;
-    --md-tertiary-container: #fde8d5;
-    --md-error: #b3261e;
-    --md-error-container: #f9dedc;
-    --md-surface: #fafafa;
-    --md-surface-variant: #f1f3f4;
-    --md-surface-container: #ffffff;
-    --md-surface-container-high: #f5f7fa;
-    --md-surface-container-highest: #e8eaed;
-    --md-outline: #dadce0;
-    --md-outline-variant: #e8eaed;
-    --md-on-surface: #202124;
-    --md-on-surface-variant: #5f6368;
-    --md-shadow: rgba(0,0,0,0.1);
-    --md-shadow-elevated: rgba(0,0,0,0.15);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
-    --transition: 200ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Roboto', sans-serif;
-    background: var(--md-surface);
-    color: var(--md-on-surface);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── NAV ── */
-  .top-app-bar {
-    background: var(--md-surface-container);
-    border-bottom: 1px solid var(--md-outline);
-    padding: 0 16px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 1px 3px var(--md-shadow);
-  }
-  .app-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    color: var(--md-on-surface);
-  }
-  .app-logo-icon {
-    width: 36px; height: 36px;
-    background: var(--md-primary);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    font-size: 20px;
-  }
-  .app-title {
-    font-family: 'Google Sans Display', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--md-primary);
-  }
-  .app-title span { color: var(--md-on-surface-variant); font-weight: 400; font-size: 14px; margin-left: 4px; }
-  .top-bar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-
-  /* ── LAYOUT ── */
-  .app-layout { display: flex; flex: 1; min-height: 0; }
-
-  .nav-rail {
-    width: 80px;
-    background: var(--md-surface-container);
-    border-right: 1px solid var(--md-outline);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 0;
-    gap: 4px;
-    position: sticky;
-    top: 64px;
-    height: calc(100vh - 64px);
-    overflow-y: auto;
-  }
-  .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 12px 8px;
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: background var(--transition);
-    width: 72px;
-    color: var(--md-on-surface-variant);
-    font-size: 11px;
-    font-family: 'Google Sans', sans-serif;
-    font-weight: 500;
-    text-align: center;
-    border: none;
-    background: none;
-  }
-  .nav-item .material-icons-round { font-size: 24px; }
-  .nav-item:hover { background: var(--md-surface-variant); }
-  .nav-item.active {
-    background: var(--md-primary-container);
-    color: var(--md-on-primary-container);
-  }
-
-  .main-content { flex: 1; padding: 24px; overflow-y: auto; max-width: 1400px; }
-
-  /* ── PAGES ── */
-  .page { display: none; }
-  .page.active { display: block; }
-
-  /* ── CARDS ── */
-  .card {
-    background: var(--md-surface-container);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--md-outline);
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 3px var(--md-shadow);
-    transition: box-shadow var(--transition);
-  }
-  .card:hover { box-shadow: 0 2px 8px var(--md-shadow-elevated); }
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .card-icon {
-    width: 40px; height: 40px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-  }
-  .card-title { font-family: 'Google Sans', sans-serif; font-size: 16px; font-weight: 600; }
-  .card-subtitle { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
-
-  /* ── BUTTONS ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 20px;
-    border-radius: var(--radius-xl);
-    font-family: 'Google Sans', sans-serif;
-    font-size: 14px; font-weight: 500;
-    cursor: pointer;
-    border: none;
-    transition: all var(--transition);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .btn .material-icons-round { font-size: 18px; }
-  .btn-filled { background: var(--md-primary); color: white; }
-  .btn-filled:hover { box-shadow: 0 2px 8px rgba(26,115,232,0.4); }
-  .btn-tonal { background: var(--md-primary-container); color: var(--md-on-primary-container); }
-  .btn-tonal:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  .btn-outlined { background: transparent; border: 1px solid var(--md-outline); color: var(--md-on-surface); }
-  .btn-outlined:hover { background: var(--md-surface-variant); }
-  .btn-text { background: transparent; color: var(--md-primary); padding: 8px 12px; }
-  .btn-text:hover { background: var(--md-primary-container); }
-  .btn-danger { background: var(--md-error); color: white; }
-  .btn-danger:hover { box-shadow: 0 2px 8px rgba(179,38,30,0.4); }
-  .btn-sm { padding: 6px 14px; font-size: 13px; }
-  .btn-sm .material-icons-round { font-size: 16px; }
-  .btn-icon {
-    width: 40px; height: 40px; padding: 0;
-    border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: transparent; border: none; cursor: pointer;
-    color: var(--md-on-surface-variant);
-    transition: background var(--transition);
-  }
-  .btn-icon:hover { background: var(--md-surface-variant); }
-  .btn-icon .material-icons-round { font-size: 20px; }
-
-  /* ── FORM ELEMENTS ── */
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
-  .form-label {
-    font-size: 12px; font-weight: 500;
-    color: var(--md-on-surface-variant);
-    font-family: 'Google Sans', sans-serif;
-  }
-  .form-input, .form-select {
-    border: 1px solid var(--md-outline);
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    font-size: 14px;
-    font-family: 'Roboto', sans-serif;
-    color: var(--md-on-surface);
-    background: var(--md-surface-container);
-    transition: border-color var(--transition), box-shadow var(--transition);
-    outline: none;
-    width: 100%;
-  }
-  .form-input:focus, .form-select:focus {
-    border-color: var(--md-primary);
-    box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
-  }
-  .form-select { cursor: pointer; }
-  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
-  .checkbox-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 14px;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--md-outline);
-    font-size: 13px;
-    cursor: pointer;
-    transition: all var(--transition);
-    user-select: none;
-    background: var(--md-surface-container);
-    color: var(--md-on-surface);
-    font-family: 'Google Sans', sans-serif;
-  }
-  .checkbox-chip input { display: none; }
-  .checkbox-chip.checked {
-    background: var(--md-primary-container);
-    border-color: var(--md-primary);
-    color: var(--md-on-primary-container);
-  }
-
-  /* ── CHIPS & BADGES ── */
-  .chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 4px 12px;
-    border-radius: var(--radius-xl);
-    font-size: 12px; font-weight: 500;
-    font-family: 'Google Sans', sans-serif;
-  }
-  .chip-primary { background: var(--md-primary-container); color: var(--md-on-primary-container); }
-  .chip-secondary { background: var(--md-secondary-container); color: #004d40; }
-  .chip-tertiary { background: var(--md-tertiary-container); color: #7b3800; }
-  .chip-error { background: var(--md-error-container); color: var(--md-error); }
-  .chip-surface { background: var(--md-surface-variant); color: var(--md-on-surface-variant); }
-
-  /* ── TABLES ── */
-  .data-table { width: 100%; border-collapse: collapse; }
-  .data-table th {
-    text-align: left; padding: 12px 16px;
-    font-family: 'Google Sans', sans-serif;
-    font-size: 12px; font-weight: 600;
-    color: var(--md-on-surface-variant);
-    border-bottom: 2px solid var(--md-outline);
-    text-transform: uppercase; letter-spacing: 0.5px;
-    white-space: nowrap;
-  }
-  .data-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--md-outline-variant);
-    font-size: 14px;
-    vertical-align: middle;
-  }
-  .data-table tr:hover td { background: var(--md-surface-variant); }
-  .data-table tr:last-child td { border-bottom: none; }
-
-  /* ── DIALOG ── */
-  .dialog-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 200;
-    display: none;
-    align-items: center; justify-content: center;
-    padding: 16px;
-  }
-  .dialog-backdrop.open { display: flex; }
-  .dialog {
-    background: var(--md-surface-container);
-    border-radius: var(--radius-xl);
-    padding: 24px;
-    width: 100%; max-width: 560px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    animation: dialog-in 0.2s cubic-bezier(0.2,0,0,1);
-  }
-  @keyframes dialog-in {
-    from { opacity:0; transform: scale(0.92) translateY(8px); }
-    to { opacity:1; transform: scale(1) translateY(0); }
-  }
-  .dialog-title {
-    font-family: 'Google Sans Display', sans-serif;
-    font-size: 22px; font-weight: 600;
-    margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .dialog-actions {
-    display: flex; gap: 8px; justify-content: flex-end;
-    margin-top: 24px; padding-top: 16px;
-    border-top: 1px solid var(--md-outline-variant);
-  }
-
-  /* ── SCHEDULE GRID ── */
-  .schedule-container { overflow-x: auto; }
-  .schedule-grid {
-    display: grid;
-    min-width: 900px;
-    border: 1px solid var(--md-outline);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .schedule-header-row {
-    display: flex;
-    background: var(--md-primary);
-    color: white;
-    font-family: 'Google Sans', sans-serif;
-    font-size: 13px; font-weight: 600;
-  }
-  .schedule-emp-col { width: 160px; min-width: 160px; padding: 10px 12px; border-right: 1px solid rgba(255,255,255,0.2); }
-  .schedule-hours { flex: 1; display: flex; }
-  .hour-tick {
-    flex: 1; min-width: 40px;
-    padding: 10px 4px;
-    text-align: center; font-size: 11px;
-    border-right: 1px solid rgba(255,255,255,0.15);
-  }
-  .schedule-row {
-    display: flex;
-    border-top: 1px solid var(--md-outline-variant);
-    min-height: 48px;
-    align-items: center;
-  }
-  .schedule-row:nth-child(even) { background: var(--md-surface-variant); }
-  .schedule-emp-name {
-    width: 160px; min-width: 160px;
-    padding: 8px 12px;
-    font-size: 13px; font-weight: 500;
-    border-right: 1px solid var(--md-outline-variant);
-    font-family: 'Google Sans', sans-serif;
-  }
-  .schedule-emp-store { font-size: 11px; color: var(--md-on-surface-variant); font-weight: 400; }
-  .schedule-timeline { flex: 1; position: relative; height: 48px; }
-  .shift-block {
-    position: absolute; top: 6px; height: 36px;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600;
-    color: white;
-    font-family: 'Google Sans', sans-serif;
-    overflow: hidden;
-    cursor: pointer;
-    transition: filter var(--transition);
-    z-index: 1;
-  }
-  .shift-block:hover { filter: brightness(1.1); }
-  .lunch-block {
-    position: absolute; top: 16px; height: 16px;
-    background: rgba(0,0,0,0.25);
-    border-radius: 3px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: white; font-weight: 700;
-  }
-  .hour-line {
-    position: absolute; top: 0; bottom: 0;
-    width: 1px; background: var(--md-outline-variant);
-    z-index: 0;
-  }
-
-  /* ── STATS CARDS ── */
-  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .stat-card {
-    background: var(--md-surface-container);
-    border: 1px solid var(--md-outline);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 1px 3px var(--md-shadow);
-  }
-  .stat-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-  .stat-value { font-family: 'Google Sans Display', sans-serif; font-size: 24px; font-weight: 700; line-height: 1; }
-  .stat-label { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
-
-  /* ── SECTION TITLES ── */
-  .section-title {
-    font-family: 'Google Sans Display', sans-serif;
-    font-size: 24px; font-weight: 700;
-    margin-bottom: 6px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .section-sub { font-size: 14px; color: var(--md-on-surface-variant); margin-bottom: 24px; }
-
-  /* ── PAYROLL BAR ── */
-  .payroll-bar-container { margin-top: 12px; }
-  .payroll-bar-bg {
-    height: 8px; border-radius: 4px;
-    background: var(--md-outline);
-    overflow: hidden;
-  }
-  .payroll-bar-fill {
-    height: 100%; border-radius: 4px;
-    background: var(--md-primary);
-    transition: width 0.5s cubic-bezier(0.2,0,0,1);
-  }
-  .payroll-bar-fill.over { background: var(--md-error); }
-  .payroll-bar-fill.close { background: var(--md-secondary); }
-  .payroll-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 6px; }
-
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    text-align: center; padding: 60px 20px;
-    color: var(--md-on-surface-variant);
-  }
-  .empty-state .material-icons-round { font-size: 64px; margin-bottom: 16px; opacity: 0.4; display: block; }
-  .empty-state h3 { font-family: 'Google Sans', sans-serif; font-size: 18px; margin-bottom: 8px; }
-  .empty-state p { font-size: 14px; }
-
-  /* ── TOAST ── */
-  .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 500; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-  .toast {
-    background: #333; color: white;
-    padding: 12px 20px; border-radius: var(--radius-xl);
-    font-size: 14px; font-family: 'Google Sans', sans-serif;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    animation: toast-in 0.3s ease;
-    display: flex; align-items: center; gap: 8px;
-    white-space: nowrap;
-  }
-  .toast.success { background: var(--md-secondary); }
-  .toast.error { background: var(--md-error); }
-  @keyframes toast-in { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
-
-  /* ── WEEK SELECTOR ── */
-  .week-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .week-display {
-    font-family: 'Google Sans', sans-serif;
-    font-size: 16px; font-weight: 600;
-    padding: 8px 16px;
-    border: 1px solid var(--md-outline);
-    border-radius: var(--radius-md);
-    min-width: 200px; text-align: center;
-  }
-
-  /* ── STORE COLOR PILLS ── */
-  .store-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 12px; border-radius: var(--radius-xl);
-    font-size: 12px; font-weight: 600;
-    font-family: 'Google Sans', sans-serif;
-    color: white;
-  }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--md-outline); border-radius: 3px; }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 768px) {
-    .nav-rail { display: none; }
-    .form-grid { grid-template-columns: 1fr; }
-    .main-content { padding: 16px; }
-  }
-
-  /* ── TABS ── */
-  .tab-bar { display: flex; border-bottom: 2px solid var(--md-outline-variant); margin-bottom: 20px; gap: 0; overflow-x: auto; }
-  .tab {
-    padding: 12px 20px; cursor: pointer;
-    font-family: 'Google Sans', sans-serif; font-size: 14px; font-weight: 500;
-    color: var(--md-on-surface-variant);
-    border-bottom: 2px solid transparent; margin-bottom: -2px;
-    transition: all var(--transition);
-    white-space: nowrap;
-    background: none; border-top: none; border-left: none; border-right: none;
-  }
-  .tab:hover { color: var(--md-primary); background: var(--md-primary-container); }
-  .tab.active { color: var(--md-primary); border-bottom-color: var(--md-primary); }
-
-  /* ── PROGRESS RING ── */
-  .progress-ring-wrap { position: relative; width: 80px; height: 80px; }
-  .progress-ring-svg { transform: rotate(-90deg); }
-  .progress-ring-bg { fill: none; stroke: var(--md-outline); stroke-width: 6; }
-  .progress-ring-fill { fill: none; stroke: var(--md-primary); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
-  .progress-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Google Sans', sans-serif; }
-
-  /* Toggle */
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
-  .toggle-label { font-size: 14px; }
-  .toggle { position: relative; width: 48px; height: 28px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; inset: 0;
-    background: var(--md-outline);
-    border-radius: 14px; cursor: pointer;
-    transition: background var(--transition);
-  }
-  .toggle-slider:before {
-    content: ''; position: absolute;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: white;
-    left: 4px; top: 4px;
-    transition: transform var(--transition);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .toggle input:checked + .toggle-slider { background: var(--md-primary); }
-  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
-
-  /* Divider */
-  .divider { border: none; border-top: 1px solid var(--md-outline-variant); margin: 16px 0; }
-
-  /* Info box */
-  .info-box {
-    background: var(--md-primary-container); border: 1px solid var(--md-primary);
-    border-radius: var(--radius-md); padding: 12px 16px;
-    font-size: 13px; color: var(--md-on-primary-container);
-    display: flex; gap: 10px; align-items: flex-start;
-  }
-  .info-box .material-icons-round { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-
-  .warning-box {
-    background: var(--md-tertiary-container); border: 1px solid var(--md-tertiary);
-    border-radius: var(--radius-md); padding: 12px 16px;
-    font-size: 13px; color: #7b3800;
-    display: flex; gap: 10px; align-items: flex-start;
-    margin-bottom: 16px;
-  }
-  .warning-box .material-icons-round { font-size: 18px; flex-shrink: 0; }
-
-  .store-section-header {
-    font-family: 'Google Sans', sans-serif;
-    font-size: 18px; font-weight: 600;
-    padding: 12px 0 8px;
-    display: flex; align-items: center; gap: 10px;
-    border-bottom: 2px solid var(--md-outline-variant);
-    margin-bottom: 12px;
-  }
-
-  .day-tab-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
-  .day-tab {
-    padding: 6px 14px; border-radius: var(--radius-xl);
-    font-size: 13px; font-family: 'Google Sans', sans-serif; font-weight: 500;
-    cursor: pointer; border: 1px solid var(--md-outline);
-    background: var(--md-surface-container); color: var(--md-on-surface);
-    transition: all var(--transition);
-  }
-  .day-tab.active { background: var(--md-primary); color: white; border-color: var(--md-primary); }
-
-  /* color swatches */
-  .color-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-  .swatch {
-    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
-    border: 3px solid transparent; transition: border-color var(--transition);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .swatch.selected { border-color: var(--md-on-surface); }
-
-  .emp-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 14px; font-weight: 700;
-    font-family: 'Google Sans', sans-serif;
-    flex-shrink: 0;
-  }
+[data-theme="material-light"]{--bg:#f8f9fa;--surf:#fff;--surf2:#f1f3f4;--bdr:#dadce0;--bdr2:#e8eaed;--tx:#202124;--tx2:#5f6368;--tx3:#9aa0a6;--pri:#1a73e8;--pri-bg:#d3e3fd;--pri-tx:#041e49;--sec:#00695c;--sec-bg:#b2dfdb;--acc:#e8710a;--acc-bg:#fde8d5;--err:#b3261e;--err-bg:#f9dedc;--ok:#1e8e3e;--ok-bg:#ceead6;--warn:#f9a825;--warn-bg:#fff8e1;--nav:#fff;--hdr:#fff;--sh:0 1px 3px rgba(0,0,0,.1);--sh2:0 2px 10px rgba(0,0,0,.15);--inp:#fff;--chip:#f1f3f4;--ov:rgba(0,0,0,.5);--str:rgba(0,0,0,.02);--r1:8px;--r2:12px;--r3:16px;--r4:24px;--rp:999px;--ff:'Google Sans',sans-serif;--ffd:'Google Sans Display',sans-serif;--ffb:'Roboto',sans-serif;--dur:200ms cubic-bezier(.2,0,0,1)}
+[data-theme="material-dark"]{--bg:#1a1c1e;--surf:#2a2c2f;--surf2:#202124;--bdr:#3c3f43;--bdr2:#2e3135;--tx:#e3e3e3;--tx2:#aaa;--tx3:#606060;--pri:#a8c7fa;--pri-bg:#0b3870;--pri-tx:#d3e3fd;--sec:#80cbc4;--sec-bg:#00352e;--acc:#ffb74d;--acc-bg:#5c2800;--err:#f2b8b5;--err-bg:#601410;--ok:#81c995;--ok-bg:#0d3118;--warn:#ffe082;--warn-bg:#3e2800;--nav:#2a2c2f;--hdr:#2a2c2f;--sh:0 1px 5px rgba(0,0,0,.5);--sh2:0 3px 12px rgba(0,0,0,.6);--inp:#35363a;--chip:#35363a;--ov:rgba(0,0,0,.75);--str:rgba(255,255,255,.025);--r1:8px;--r2:12px;--r3:16px;--r4:24px;--rp:999px;--ff:'Google Sans',sans-serif;--ffd:'Google Sans Display',sans-serif;--ffb:'Roboto',sans-serif;--dur:200ms cubic-bezier(.2,0,0,1)}
+[data-theme="win95-light"]{--bg:#008080;--surf:#c0c0c0;--surf2:#d4d0c8;--bdr:#808080;--bdr2:#a0a0a0;--tx:#000;--tx2:#333;--tx3:#666;--pri:#000080;--pri-bg:#c0c0ff;--pri-tx:#000;--sec:#008080;--sec-bg:#c0c0c0;--acc:#800000;--acc-bg:#ffd0d0;--err:#800000;--err-bg:#ffd0d0;--ok:#008000;--ok-bg:#d0ffd0;--warn:#806000;--warn-bg:#ffffcc;--nav:#c0c0c0;--hdr:#000080;--sh:inset -1px -1px #fff,inset 1px 1px #808080,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a;--sh2:inset -1px -1px #fff,inset 1px 1px #808080;--inp:#fff;--chip:#c0c0c0;--ov:rgba(0,0,0,.5);--str:rgba(0,0,0,.04);--r1:0px;--r2:0px;--r3:0px;--r4:0px;--rp:0px;--ff:'MS Sans Serif','Segoe UI',Arial,sans-serif;--ffd:'MS Sans Serif','Segoe UI',Arial,sans-serif;--ffb:'MS Sans Serif','Segoe UI',Arial,sans-serif;--dur:0ms}
+[data-theme="win95-dark"]{--bg:#004040;--surf:#1a1a2e;--surf2:#16213e;--bdr:#404060;--bdr2:#303050;--tx:#c0c0c0;--tx2:#909090;--tx3:#606060;--pri:#5555aa;--pri-bg:#1a1a60;--pri-tx:#c0c0ff;--sec:#007070;--sec-bg:#003030;--acc:#aa5500;--acc-bg:#442200;--err:#aa0000;--err-bg:#440000;--ok:#005500;--ok-bg:#002200;--warn:#806000;--warn-bg:#302000;--nav:#1a1a2e;--hdr:#000060;--sh:inset -1px -1px #404060,inset 1px 1px #000;--sh2:inset -1px -1px #505070,inset 1px 1px #000;--inp:#000020;--chip:#1a1a2e;--ov:rgba(0,0,0,.75);--str:rgba(255,255,255,.02);--r1:0px;--r2:0px;--r3:0px;--r4:0px;--rp:0px;--ff:'MS Sans Serif','Segoe UI',Arial,sans-serif;--ffd:'MS Sans Serif','Segoe UI',Arial,sans-serif;--ffb:'MS Sans Serif','Segoe UI',Arial,sans-serif;--dur:0ms}
+[data-theme="mac9-light"]{--bg:#999;--surf:#ddd;--surf2:#ccc;--bdr:#888;--bdr2:#aaa;--tx:#000;--tx2:#333;--tx3:#666;--pri:#00c;--pri-bg:#c0c0ff;--pri-tx:#000044;--sec:#006600;--sec-bg:#ccffcc;--acc:#c60;--acc-bg:#fc9;--err:#c00;--err-bg:#fcc;--ok:#006600;--ok-bg:#cfc;--warn:#806000;--warn-bg:#ffe;--nav:#ddd;--hdr:#5555cc;--sh:2px 2px 4px rgba(0,0,0,.4);--sh2:3px 3px 6px rgba(0,0,0,.4);--inp:#fff;--chip:#ccc;--ov:rgba(0,0,0,.4);--str:rgba(0,0,0,.03);--r1:6px;--r2:8px;--r3:10px;--r4:14px;--rp:999px;--ff:'Geneva',Arial,sans-serif;--ffd:'Chicago','Geneva',Arial,sans-serif;--ffb:'Geneva',Arial,sans-serif;--dur:80ms}
+[data-theme="mac9-dark"]{--bg:#1a0a2e;--surf:#2d1b4e;--surf2:#1a0a2e;--bdr:#5533aa;--bdr2:#3d2266;--tx:#ddf;--tx2:#aac;--tx3:#779;--pri:#99f;--pri-bg:#330066;--pri-tx:#ddf;--sec:#6f9;--sec-bg:#003322;--acc:#f94;--acc-bg:#411100;--err:#f66;--err-bg:#440000;--ok:#6f9;--ok-bg:#003322;--warn:#ff6;--warn-bg:#332200;--nav:#2d1b4e;--hdr:#3322aa;--sh:2px 2px 6px rgba(0,0,0,.6);--sh2:3px 3px 8px rgba(0,0,0,.7);--inp:#1a0a2e;--chip:#3d2b5e;--ov:rgba(0,0,0,.75);--str:rgba(255,255,255,.02);--r1:6px;--r2:8px;--r3:10px;--r4:14px;--rp:999px;--ff:'Geneva',Arial,sans-serif;--ffd:'Chicago','Geneva',Arial,sans-serif;--ffb:'Geneva',Arial,sans-serif;--dur:80ms}
+[data-theme^="win95"] .card{box-shadow:var(--sh)!important;border:2px solid!important;border-color:#dfdfdf #0a0a0a #0a0a0a #dfdfdf!important}
+[data-theme^="win95"] .app-title{color:#fff!important}
+[data-theme^="win95"] .nb.on{background:#000080!important;color:#fff!important}
+[data-theme="win95-dark"] .nb.on{background:#000060!important}
+[data-theme^="win95"] .btn-pri{border:2px solid;border-color:#dfdfdf #0a0a0a #0a0a0a #dfdfdf;background:#c0c0c0!important;color:#000!important;border-radius:0!important}
+[data-theme="win95-dark"] .btn-pri{background:#1a1a2e!important;color:#c0c0c0!important}
+[data-theme^="win95"] .dlg-title{background:#000080;color:#fff;margin:-22px -22px 14px;padding:4px 8px;font-size:12px;font-weight:bold}
+[data-theme="win95-dark"] .dlg-title{background:#000060}
+[data-theme^="win95"] .finput,[data-theme^="win95"] .fsel{border:2px inset #808080}
+[data-theme^="mac9"] .app-title{color:#fff!important}
+[data-theme^="mac9"] .dlg-title{background:linear-gradient(#99f,#00c);color:#fff;margin:-22px -22px 14px;padding:6px 12px;border-radius:var(--r2) var(--r2) 0 0}
+[data-theme="mac9-dark"] .dlg-title{background:linear-gradient(#6633cc,#220066)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--ffb);background:var(--bg);color:var(--tx);display:flex;flex-direction:column;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+.top-bar{background:var(--hdr);border-bottom:1px solid var(--bdr);height:56px;display:flex;align-items:center;padding:0 14px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:var(--sh);flex-shrink:0}
+.logo-icon{width:30px;height:30px;background:var(--pri);border-radius:var(--r1);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.logo-icon .mi{font-size:17px}
+.app-title{font-family:var(--ffd);font-size:16px;font-weight:700;color:var(--pri)}
+.app-title .v{font-size:9px;color:var(--tx3);font-weight:400;margin-left:3px}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:7px}
+.app-body{display:flex;flex:1;min-height:0}
+.nav-rail{width:76px;background:var(--nav);border-right:1px solid var(--bdr);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:1px;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;flex-shrink:0}
+.nb{width:64px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 3px;border-radius:var(--r2);cursor:pointer;border:none;background:none;color:var(--tx2);font-family:var(--ff);font-size:9.5px;font-weight:500;text-align:center;transition:background var(--dur),color var(--dur);line-height:1.2}
+.nb .mi{font-size:20px}
+.nb:hover{background:var(--surf2);color:var(--pri)}
+.nb.on{background:var(--pri-bg);color:var(--pri)}
+.nav-sep{width:38px;height:1px;background:var(--bdr);margin:4px 0}
+.main{flex:1;padding:20px;overflow-y:auto;min-width:0}
+.page{display:none;animation:fin .15s ease}.page.on{display:block}
+@keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.pg-title{font-family:var(--ffd);font-size:20px;font-weight:700;display:flex;align-items:center;gap:7px}
+.pg-title .mi{color:var(--pri);font-size:22px}
+.pg-sub{font-size:12px;color:var(--tx2);margin-bottom:16px}
+.pg-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.card{background:var(--surf);border-radius:var(--r3);border:1px solid var(--bdr);padding:16px;margin-bottom:12px;box-shadow:var(--sh);transition:box-shadow var(--dur)}
+.card:hover{box-shadow:var(--sh2)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rp);font-family:var(--ff);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all var(--dur);white-space:nowrap;line-height:1}
+.btn .mi{font-size:14px}
+.btn-pri{background:var(--pri);color:#fff}.btn-pri:hover{opacity:.9;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.btn-ton{background:var(--pri-bg);color:var(--pri)}.btn-ton:hover{opacity:.85}
+.btn-out{background:transparent;border:1px solid var(--bdr);color:var(--tx)}.btn-out:hover{background:var(--surf2)}
+.btn-err{background:var(--err);color:#fff}
+.btn-sm{padding:5px 11px;font-size:11px}.btn-sm .mi{font-size:13px}
+.ib{width:32px;height:32px;padding:0;border-radius:50%;background:transparent;border:none;cursor:pointer;color:var(--tx2);display:inline-flex;align-items:center;justify-content:center;transition:background var(--dur),color var(--dur)}
+.ib:hover{background:var(--surf2);color:var(--pri)}.ib.del:hover{background:var(--err-bg);color:var(--err)}.ib .mi{font-size:16px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px}
+.full{grid-column:1/-1}
+.flabel{font-family:var(--ff);font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px}
+.finput,.fsel{border:1px solid var(--bdr);border-radius:var(--r1);padding:7px 10px;font-size:12px;font-family:var(--ffb);color:var(--tx);background:var(--inp);transition:border-color var(--dur),box-shadow var(--dur);outline:none;width:100%}
+.finput:focus,.fsel:focus{border-color:var(--pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 18%,transparent)}
+.fsel{cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip-cb{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--rp);border:1px solid var(--bdr);font-size:11px;font-family:var(--ff);cursor:pointer;user-select:none;background:var(--chip);color:var(--tx);transition:all var(--dur)}
+.chip-cb input{display:none}.chip-cb.on{background:var(--pri-bg);border-color:var(--pri);color:var(--pri);font-weight:600}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--rp);font-size:10px;font-weight:700;font-family:var(--ff)}
+.bp{background:var(--pri-bg);color:var(--pri)}.bs{background:var(--ok-bg);color:var(--ok)}.be{background:var(--err-bg);color:var(--err)}.ba{background:var(--acc-bg);color:var(--acc)}.bn{background:var(--surf2);color:var(--tx2)}.bw{background:var(--warn-bg);color:var(--warn)}
+.dlg-bd{position:fixed;inset:0;background:var(--ov);z-index:200;display:none;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(2px)}
+.dlg-bd.on{display:flex}
+.dlg{background:var(--surf);border-radius:var(--r4);padding:22px;width:100%;max-width:560px;max-height:93vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);animation:din .18s cubic-bezier(.2,0,0,1);border:1px solid var(--bdr)}
+.dlg.wide{max-width:700px}.dlg.xl{max-width:880px}
+@keyframes din{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.dlg-title{font-family:var(--ffd);font-size:16px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.dlg-title .mi{color:var(--pri)}
+.dlg-acts{display:flex;gap:7px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--bdr2)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;padding:8px 12px;font-family:var(--ff);font-size:10px;font-weight:700;color:var(--tx2);border-bottom:2px solid var(--bdr);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.tbl td{padding:8px 12px;border-bottom:1px solid var(--bdr2);vertical-align:middle;color:var(--tx)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{cursor:pointer;transition:background var(--dur)}.tbl tbody tr:hover td{background:var(--surf2)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin-bottom:14px}
+.sc{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);padding:12px;display:flex;align-items:center;gap:9px;box-shadow:var(--sh)}
+.si{width:38px;height:38px;border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.sv{font-family:var(--ffd);font-size:20px;font-weight:700;line-height:1;color:var(--tx)}.sl{font-size:10px;color:var(--tx2);margin-top:2px}
+.pb{margin-top:7px}.pb-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--tx2);margin-bottom:4px}
+.pb-bg{height:5px;border-radius:3px;background:var(--surf2);overflow:hidden}
+.pb-fill{height:100%;border-radius:3px;background:var(--pri);transition:width .4s ease}
+.pb-fill.warn{background:var(--acc)}.pb-fill.over{background:var(--err)}
+.sg-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--bdr)}.sg{min-width:700px}
+.sg-head{display:flex;background:var(--pri);color:#fff;font-family:var(--ff);font-size:10px;font-weight:600}
+.sg-ec{width:155px;min-width:155px;padding:8px 10px;border-right:1px solid rgba(255,255,255,.2);flex-shrink:0}
+.sg-th{flex:1;display:flex}
+.htick{flex:1;min-width:28px;padding:8px 1px;text-align:center;font-size:9px;border-right:1px solid rgba(255,255,255,.15);overflow:hidden}
+.sr{display:flex;border-top:1px solid var(--bdr2);min-height:46px;align-items:stretch}
+.sr:nth-child(even){background:var(--str)}
+.semp{width:155px;min-width:155px;padding:6px 10px;border-right:1px solid var(--bdr2);display:flex;align-items:center;gap:6px;flex-shrink:0}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;font-family:var(--ff);flex-shrink:0}
+.en{font-size:11px;font-weight:600;font-family:var(--ff);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.es{font-size:9px;color:var(--tx2)}
+.stl{flex:1;position:relative;min-height:46px}
+.hl{position:absolute;top:0;bottom:0;width:1px;background:var(--bdr2);z-index:0}
+.sbar{position:absolute;top:5px;height:34px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;font-family:var(--ff);overflow:hidden;white-space:nowrap;cursor:pointer;z-index:1;padding:0 4px;transition:filter var(--dur)}
+.sbar:hover{filter:brightness(1.15)}.sbar.ot{outline:2px solid gold;outline-offset:-2px}
+.lpip{position:absolute;top:15px;height:12px;background:rgba(0,0,0,.3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;z-index:2;pointer-events:none}
+.wv-table{width:100%;border-collapse:collapse;font-size:11px;min-width:700px}
+.wv-table th{padding:7px 8px;border:1px solid var(--bdr);background:var(--pri);color:#fff;font-family:var(--ff);font-size:10px;font-weight:600;text-align:center;white-space:nowrap}
+.wv-table th:first-child{text-align:left;width:130px}
+.wv-table td{padding:5px 7px;border:1px solid var(--bdr2);text-align:center;vertical-align:middle;font-family:var(--ff);font-size:10px;color:var(--tx)}
+.wv-table td:first-child{text-align:left;font-weight:600;background:var(--surf2);font-size:11px}
+.wv-cs{background:var(--pri-bg);color:var(--pri);border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;display:inline-block}
+.wv-cot{background:var(--warn-bg);color:var(--warn);border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;display:inline-block}
+.wv-ch{background:var(--err-bg);color:var(--err);border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;display:inline-block}
+.wv-tot{background:var(--ok-bg)!important;color:var(--ok);font-weight:700}
+.dtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.dtab{padding:5px 11px;border-radius:var(--rp);font-size:11px;font-family:var(--ff);font-weight:500;cursor:pointer;border:1px solid var(--bdr);background:var(--surf);color:var(--tx2);transition:all var(--dur)}
+.dtab:hover{color:var(--pri);border-color:var(--pri)}.dtab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.dtab.closed{opacity:.4}.dtab.hol{border-color:var(--err);color:var(--err)}.dtab.on.hol{background:var(--err)}
+.stabs{display:flex;overflow-x:auto;border-bottom:2px solid var(--bdr2);margin-bottom:10px}
+.stab{padding:8px 14px;cursor:pointer;font-family:var(--ff);font-size:12px;font-weight:500;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all var(--dur);white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;display:flex;align-items:center;gap:5px}
+.stab:hover{color:var(--pri)}.stab.on{color:var(--pri);border-bottom-color:var(--pri)}
+.sdot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.wbar{display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.wlbl{font-family:var(--ff);font-size:13px;font-weight:600;color:var(--tx);padding:6px 12px;border:1px solid var(--bdr);border-radius:var(--r2);background:var(--surf);min-width:195px;text-align:center}
+.vt{display:flex;border:1px solid var(--bdr);border-radius:var(--r1);overflow:hidden;flex-shrink:0}
+.vt-b{padding:6px 12px;font-family:var(--ff);font-size:11px;font-weight:500;cursor:pointer;border:none;background:var(--surf);color:var(--tx2);transition:all var(--dur);display:flex;align-items:center;gap:4px}
+.vt-b .mi{font-size:13px}.vt-b.on{background:var(--pri);color:#fff}
+.sbanner{padding:10px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between;font-family:var(--ff);font-size:13px;font-weight:600;flex-wrap:wrap;gap:5px}
+.hbadge{background:rgba(255,200,0,.25);border:1px solid gold;border-radius:4px;padding:1px 7px;font-size:10px;color:gold}
+.empty{text-align:center;padding:40px 16px;color:var(--tx2)}
+.empty .mi{font-size:48px;display:block;margin-bottom:10px;opacity:.3}
+.empty h3{font-family:var(--ff);font-size:14px;font-weight:600;margin-bottom:5px}.empty p{font-size:12px}
+.toast-wrap{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none}
+.toast{background:#2a2a2a;color:#fff;padding:9px 15px;border-radius:var(--rp);font-size:12px;font-family:var(--ff);box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px;animation:tin .25s ease}
+.toast .mi{font-size:14px}.toast.ok{background:var(--ok)}.toast.err{background:var(--err)}.toast.warn{background:var(--acc)}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+hr.dv{border:none;border-top:1px solid var(--bdr2);margin:12px 0}
+.ibox{background:var(--pri-bg);border:1px solid var(--pri);border-radius:var(--r2);padding:8px 12px;font-size:11px;color:var(--pri-tx);display:flex;gap:7px;align-items:flex-start;margin-bottom:10px}
+.ibox .mi{font-size:14px;flex-shrink:0;margin-top:1px}
+.wbox{background:var(--warn-bg);border:1px solid var(--warn);border-radius:var(--r2);padding:8px 12px;font-size:11px;color:var(--tx);display:flex;gap:7px;align-items:flex-start;margin-bottom:10px}
+.wbox .mi{font-size:14px;flex-shrink:0;color:var(--warn)}
+.sws{display:flex;flex-wrap:wrap;gap:6px}
+.swd{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all var(--dur);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.swd.on{border-color:var(--tx);transform:scale(1.12)}
+.slbl{font-family:var(--ff);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);margin:14px 0 7px}
+.trow{display:flex;align-items:center;justify-content:space-between;padding:7px 0}
+.tlab{font-size:12px;color:var(--tx)}.tlab small{display:block;font-size:10px;color:var(--tx2);margin-top:1px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}.toggle input{opacity:0;width:0;height:0}
+.ttrack{position:absolute;inset:0;border-radius:11px;background:var(--bdr);cursor:pointer;transition:background var(--dur)}
+.ttrack::before{content:'';position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;left:4px;top:3.5px;transition:transform var(--dur);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.ttrack{background:var(--pri)}.toggle input:checked+.ttrack::before{transform:translateX(17px)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:4px}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
+.cal-dh{text-align:center;font-size:9px;font-weight:700;color:var(--tx2);font-family:var(--ff);text-transform:uppercase;padding:3px 0}
+.cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--ff);border-radius:var(--r1);cursor:pointer;border:1px solid transparent;transition:all var(--dur);color:var(--tx);position:relative;flex-direction:column;gap:1px}
+.cal-cell:hover{background:var(--surf2);border-color:var(--bdr)}.cal-cell.other{color:var(--tx3)}
+.cal-cell.today{font-weight:700;border-color:var(--pri);color:var(--pri)}
+.cal-cell.federal{background:var(--pri-bg);color:var(--pri);font-weight:700}
+.cal-cell.custom-hol{background:var(--err-bg);color:var(--err);font-weight:700}
+.cal-dot{width:4px;height:4px;border-radius:50%;background:currentColor;flex-shrink:0}
+.avail-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.avail-tbl th{padding:5px 7px;border:1px solid var(--bdr);background:var(--surf2);font-family:var(--ff);font-size:9px;font-weight:700;color:var(--tx2);text-align:center;text-transform:uppercase}
+.avail-tbl th:first-child{text-align:left}
+.avail-tbl td{padding:4px 6px;border:1px solid var(--bdr2);text-align:center;vertical-align:middle}
+.avail-tbl td:first-child{text-align:left;font-weight:500;font-family:var(--ff);font-size:11px}
+.at-inp{width:80px;padding:3px 5px;font-size:10px}
+.hol-info{background:var(--err-bg);border:1px solid var(--err);border-radius:var(--r1);padding:5px 10px;font-size:11px;color:var(--err);display:flex;align-items:center;gap:5px;margin-bottom:8px;font-family:var(--ff)}
+@media(max-width:640px){.nav-rail{display:none}.main{padding:12px}.fgrid{grid-template-columns:1fr}}
+@media print{.top-bar,.nav-rail,.wbar,.dtabs,.stabs,.pg-acts,.btn{display:none!important}.main{padding:0}.card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid}}
+.mi{font-family:'Material Icons Round';font-weight:normal;font-style:normal;font-size:20px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;vertical-align:middle}
 </style>
-  <!-- PWA -->
-  <meta name="theme-color" content="#1a73e8">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Schedy">
-  <meta name="description" content="Smart multi-store retail scheduling">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-
-<!-- TOP APP BAR -->
-<header class="top-app-bar">
-  <div class="app-logo">
-    <div class="app-logo-icon"><span class="material-icons-round">schedule</span></div>
-    <div>
-      <div class="app-title">Schedy <span>Alpha</span></div>
-    </div>
-  </div>
-  <div class="top-bar-actions">
-    <button class="btn btn-outlined btn-sm" onclick="exportData()">
-      <span class="material-icons-round">download</span> Export JSON
-    </button>
-    <label class="btn btn-tonal btn-sm" style="cursor:pointer">
-      <span class="material-icons-round">upload</span> Import JSON
-      <input type="file" accept=".json" style="display:none" onchange="importData(event)">
-    </label>
+<header class="top-bar">
+  <div class="logo-icon"><span class="mi">schedule</span></div>
+  <div class="app-title">Schedy <span class="v">Alpha</span></div>
+  <div class="top-r">
+    <select class="finput" id="theme-sel" style="width:auto;font-size:11px;padding:4px 7px;cursor:pointer" onchange="applyTheme(this.value)">
+      <optgroup label="Material Design 3"><option value="material-light">MD3 Light</option><option value="material-dark">MD3 Dark</option></optgroup>
+      <optgroup label="Windows 95"><option value="win95-light">Win95 Light</option><option value="win95-dark">Win95 Dark</option></optgroup>
+      <optgroup label="Mac OS 9"><option value="mac9-light">Mac OS 9 Light</option><option value="mac9-dark">Mac OS 9 Dark</option></optgroup>
+    </select>
+    <button class="btn btn-out btn-sm" onclick="exportJSON()"><span class="mi">download</span>Export</button>
+    <label class="btn btn-ton btn-sm" style="cursor:pointer"><span class="mi">upload</span>Import<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
   </div>
 </header>
-
-<div class="app-layout">
-
-<!-- NAV RAIL -->
+<div class="app-body">
 <nav class="nav-rail">
-  <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-    <span class="material-icons-round">dashboard</span>Dashboard
-  </button>
-  <button class="nav-item" onclick="showPage('stores')" id="nav-stores">
-    <span class="material-icons-round">store</span>Stores
-  </button>
-  <button class="nav-item" onclick="showPage('employees')" id="nav-employees">
-    <span class="material-icons-round">people</span>Staff
-  </button>
-  <button class="nav-item" onclick="showPage('schedule')" id="nav-schedule">
-    <span class="material-icons-round">calendar_month</span>Schedule
-  </button>
-  <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
-    <span class="material-icons-round">tune</span>Settings
-  </button>
+  <button class="nb on" id="nb-dashboard" onclick="nav('dashboard')"><span class="mi">dashboard</span>Dashboard</button>
+  <button class="nb" id="nb-stores" onclick="nav('stores')"><span class="mi">store</span>Stores</button>
+  <button class="nb" id="nb-employees" onclick="nav('employees')"><span class="mi">people</span>Staff</button>
+  <button class="nb" id="nb-schedule" onclick="nav('schedule')"><span class="mi">calendar_month</span>Schedule</button>
+  <button class="nb" id="nb-holidays" onclick="nav('holidays')"><span class="mi">event</span>Holidays</button>
+  <div class="nav-sep"></div>
+  <button class="nb" id="nb-settings" onclick="nav('settings')"><span class="mi">tune</span>Settings</button>
 </nav>
-
-<!-- MAIN CONTENT -->
-<main class="main-content">
-
-  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
-  <div class="page active" id="page-dashboard">
-    <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">dashboard</span>Dashboard</div>
-    <div class="section-sub">Overview of all stores, staff, and schedule status.</div>
-
-    <div id="dashboard-stats" class="stats-row"></div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="dashboard-cards">
+<main class="main">
+<div class="page on" id="page-dashboard">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">dashboard</span>Dashboard</div><div class="pg-sub">Overview of all stores, staff, and this week's payroll.</div></div></div>
+  <div id="ds-stats" class="stats-row"></div><div id="ds-stores"></div>
+</div>
+<div class="page" id="page-stores">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">store</span>Stores</div><div class="pg-sub">Manage locations, hours, and overtime rules.</div></div>
+    <button class="btn btn-pri" onclick="openStoreDlg()"><span class="mi">add</span>Add Store</button></div>
+  <div id="stores-list"></div>
+</div>
+<div class="page" id="page-employees">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">people</span>Staff</div><div class="pg-sub">Manage staff wages and per-day availability. Click any row to edit.</div></div>
+    <button class="btn btn-pri" onclick="openEmpDlg()"><span class="mi">person_add</span>Add Employee</button></div>
+  <div id="emp-list"></div>
+</div>
+<div class="page" id="page-schedule">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">calendar_month</span>Schedule</div><div class="pg-sub">Auto-optimized shifts within per-week payroll budgets.</div></div>
+    <div class="pg-acts">
+      <button class="btn btn-pri" onclick="generateSched()"><span class="mi">auto_awesome</span>Generate</button>
+      <button class="btn btn-ton" onclick="openBudgetDlg()"><span class="mi">payments</span>Budgets</button>
+      <button class="btn btn-out btn-sm" onclick="exportXLSX()"><span class="mi">table_chart</span>Export XLSX</button>
+      <button class="btn btn-out btn-sm" onclick="window.print()"><span class="mi">print</span>Print</button>
     </div>
   </div>
-
-  <!-- ═══════════════════ STORES ═══════════════════ -->
-  <div class="page" id="page-stores">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">store</span>Stores</div>
-      <button class="btn btn-filled" onclick="openStoreDialog()">
-        <span class="material-icons-round">add</span> Add Store
-      </button>
+  <div class="wbar">
+    <button class="btn btn-ton btn-sm" onclick="prevWk()"><span class="mi">chevron_left</span></button>
+    <div class="wlbl" id="wk-lbl">-</div>
+    <button class="btn btn-ton btn-sm" onclick="nextWk()"><span class="mi">chevron_right</span></button>
+    <button class="btn btn-out btn-sm" onclick="goToday()"><span class="mi">today</span>Today</button>
+    <div class="vt" style="margin-left:8px">
+      <button class="vt-b on" id="vt-day" onclick="setView('day')"><span class="mi">view_day</span>Day</button>
+      <button class="vt-b" id="vt-week" onclick="setView('week')"><span class="mi">view_week</span>Week</button>
     </div>
-    <div class="section-sub">Manage store locations, hours, and weekly payroll budgets.</div>
-
-    <div id="stores-list"></div>
   </div>
-
-  <!-- ═══════════════════ EMPLOYEES ═══════════════════ -->
-  <div class="page" id="page-employees">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">people</span>Staff</div>
-      <button class="btn btn-filled" onclick="openEmployeeDialog()">
-        <span class="material-icons-round">person_add</span> Add Employee
-      </button>
+  <div class="stabs" id="s-tabs"></div>
+  <div id="d-tabs-wrap"><div class="dtabs" id="d-tabs"></div></div>
+  <div id="sched-content"></div>
+</div>
+<div class="page" id="page-holidays">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">event</span>Holiday Calendar</div><div class="pg-sub">US Federal holidays auto-added. Click any day to mark as a custom OT holiday.</div></div>
+    <div class="pg-acts">
+      <button class="btn btn-out btn-sm" onclick="calPrevMonth()"><span class="mi">chevron_left</span></button>
+      <span id="cal-month-lbl" style="font-family:var(--ff);font-weight:600;font-size:13px;min-width:150px;text-align:center"></span>
+      <button class="btn btn-out btn-sm" onclick="calNextMonth()"><span class="mi">chevron_right</span></button>
     </div>
-    <div class="section-sub">Manage associates, wages, availability, and store assignments.</div>
-
-    <div id="employees-list"></div>
   </div>
-
-  <!-- ═══════════════════ SCHEDULE ═══════════════════ -->
-  <div class="page" id="page-schedule">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px">
-      <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">calendar_month</span>Schedule</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-tonal" onclick="previousWeek()"><span class="material-icons-round">chevron_left</span></button>
-        <div class="week-display" id="week-display">Week of ...</div>
-        <button class="btn btn-tonal" onclick="nextWeek()"><span class="material-icons-round">chevron_right</span></button>
-        <button class="btn btn-outlined btn-sm" onclick="goToToday()"><span class="material-icons-round">today</span>Today</button>
-        <button class="btn btn-filled" onclick="generateSchedule()">
-          <span class="material-icons-round">auto_awesome</span> Generate Schedule
-        </button>
-        <button class="btn btn-tonal" onclick="exportSchedulePDF()">
-          <span class="material-icons-round">print</span> Print
-        </button>
-      </div>
-    </div>
-    <div class="section-sub">AI-optimized shifts within payroll budget. Shifts staggered per your rules.</div>
-
-    <div id="schedule-store-tabs" class="tab-bar"></div>
-    <div id="schedule-day-tabs" class="day-tab-row"></div>
-    <div id="schedule-content"></div>
-  </div>
-
-  <!-- ═══════════════════ SETTINGS ═══════════════════ -->
-  <div class="page" id="page-settings">
-    <div class="section-title"><span class="material-icons-round" style="color:var(--md-primary)">tune</span>Settings</div>
-    <div class="section-sub">Configure staggering rules, schedule generation preferences, and defaults.</div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon" style="background:var(--md-primary-container);color:var(--md-primary)"><span class="material-icons-round">schedule</span></div>
-        <div><div class="card-title">Staggering Rules</div><div class="card-subtitle">Control how overlapping shifts are created</div></div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">First Employee Alone (hours before 2nd arrives)</label>
-          <select class="form-select" id="stagger-alone" onchange="saveSettings()">
-            <option value="2">2 hours</option>
-            <option value="3" selected>3 hours</option>
-            <option value="4">4 hours</option>
-          </select>
+  <div class="card">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:260px"><div class="cal-head" id="cal-head"></div><div class="cal-grid" id="cal-grid"></div></div>
+      <div style="min-width:200px;max-width:260px">
+        <div class="slbl" style="margin-top:0">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:3px;background:var(--pri-bg)"></div><span style="font-size:11px">Federal Holiday</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:3px;background:var(--err-bg)"></div><span style="font-size:11px">Custom Holiday / OT Day</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--pri)"></div><span style="font-size:11px">Today</span></div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Stagger Interval Between Subsequent Employees</label>
-          <select class="form-select" id="stagger-interval" onchange="saveSettings()">
-            <option value="1">1 hour</option>
-            <option value="2" selected>2 hours</option>
-            <option value="3">3 hours</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Overlap Buffer (minutes before closing for last shift end)</label>
-          <select class="form-select" id="overlap-buffer" onchange="saveSettings()">
-            <option value="15">15 minutes</option>
-            <option value="30" selected>30 minutes</option>
-            <option value="45">45 minutes</option>
-            <option value="60">1 hour</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Lunch Break Trigger (hours)</label>
-          <select class="form-select" id="lunch-trigger" onchange="saveSettings()">
-            <option value="5">5 hours</option>
-            <option value="6" selected>6 hours</option>
-            <option value="7">7 hours</option>
-          </select>
-        </div>
+        <div class="slbl">Custom Holidays This Month</div>
+        <div id="custom-hol-list" style="font-size:11px;color:var(--tx2)">None</div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon" style="background:var(--md-secondary-container);color:var(--md-secondary)"><span class="material-icons-round">auto_awesome</span></div>
-        <div><div class="card-title">Generation Preferences</div><div class="card-subtitle">How the schedule optimizer works</div></div>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-label">Prefer full-time employees over part-time when filling shifts</span>
-        <label class="toggle"><input type="checkbox" id="pref-fulltime" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
-      </div>
-      <hr class="divider">
-      <div class="toggle-row">
-        <span class="toggle-label">Allow employees to float across stores in the same week</span>
-        <label class="toggle"><input type="checkbox" id="pref-float" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
-      </div>
-      <hr class="divider">
-      <div class="toggle-row">
-        <span class="toggle-label">Spread hours evenly across the week (vs front-loaded)</span>
-        <label class="toggle"><input type="checkbox" id="pref-spread" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
-      </div>
-      <hr class="divider">
-      <div class="toggle-row">
-        <span class="toggle-label">Try to give consecutive days off</span>
-        <label class="toggle"><input type="checkbox" id="pref-consec" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon" style="background:var(--md-tertiary-container);color:var(--md-tertiary)"><span class="material-icons-round">palette</span></div>
-        <div><div class="card-title">About Schedy</div><div class="card-subtitle">Version info</div></div>
-      </div>
-      <p style="font-size:14px;color:var(--md-on-surface-variant)">Schedy (Alpha) — Smart multi-store retail scheduling.<br>Built with Material Design 3. All data stays in your browser.<br><br>Features: Multi-store budgets · Float staff · Payroll optimization · Lunch-break deduction · Stagger rules · JSON persistence.</p>
     </div>
   </div>
-
+</div>
+<div class="page" id="page-settings">
+  <div class="pg-hdr"><div><div class="pg-title"><span class="mi">tune</span>Settings</div><div class="pg-sub">Scheduling rules, overtime rates, and preferences.</div></div></div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:13px"><div class="si" style="background:var(--pri-bg);color:var(--pri)"><span class="mi">schedule</span></div><div><div style="font-family:var(--ff);font-size:13px;font-weight:600">Shift Staggering</div><div style="font-size:11px;color:var(--tx2)">Control first-employee-alone time and arrival intervals</div></div></div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">First Employee Alone (hrs)</label><select class="fsel" id="s-alone" onchange="saveSettings()"><option value="2">2h</option><option value="3" selected>3h</option><option value="4">4h</option></select></div>
+      <div class="fg"><label class="flabel">Stagger Interval</label><select class="fsel" id="s-interval" onchange="saveSettings()"><option value="1">1h</option><option value="2" selected>2h</option><option value="3">3h</option></select></div>
+      <div class="fg"><label class="flabel">Lunch Trigger (shift hrs &gt;)</label><select class="fsel" id="s-lunch" onchange="saveSettings()"><option value="5">5h</option><option value="6" selected>6h</option><option value="7">7h</option></select></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:13px"><div class="si" style="background:var(--warn-bg);color:var(--warn)"><span class="mi">paid</span></div><div><div style="font-family:var(--ff);font-size:13px;font-weight:600">Overtime &amp; Holiday Rates</div><div style="font-size:11px;color:var(--tx2)">Global defaults — per-store overrides in the Stores page</div></div></div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Holiday / Custom OT Day Rate (x)</label><input class="finput" type="number" id="s-hol-rate" step="0.05" min="1" max="3" value="1.5" onchange="saveSettings()"></div>
+      <div class="fg"><label class="flabel">Weekly OT Threshold (hrs)</label><input class="finput" type="number" id="s-ot-hrs" step="1" min="1" value="40" onchange="saveSettings()"></div>
+      <div class="fg"><label class="flabel">Weekly OT Rate (x)</label><input class="finput" type="number" id="s-ot-rate" step="0.05" min="1" max="3" value="1.5" onchange="saveSettings()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:13px"><div class="si" style="background:var(--acc-bg);color:var(--acc)"><span class="mi">auto_awesome</span></div><div><div style="font-family:var(--ff);font-size:13px;font-weight:600">Scheduling Rules</div></div></div>
+    <div class="trow"><div class="tlab">Reduce Overlap Mode<small>Limit to 2 concurrent staff — ~3-4h overlap window saves payroll</small></div><label class="toggle"><input type="checkbox" id="s-reduce" onchange="saveSettings()"><span class="ttrack"></span></label></div>
+    <hr class="dv">
+    <div class="trow"><div class="tlab">Prefer Full-Time Staff First<small>Schedule employees with higher max weekly hours first</small></div><label class="toggle"><input type="checkbox" id="s-ft" checked onchange="saveSettings()"><span class="ttrack"></span></label></div>
+    <hr class="dv">
+    <div class="trow"><div class="tlab">Spread Hours Evenly Across Week<small>Avoid front-loading all hours on early weekdays</small></div><label class="toggle"><input type="checkbox" id="s-spread" checked onchange="saveSettings()"><span class="ttrack"></span></label></div>
+    <hr class="dv">
+    <div class="trow"><div class="tlab">Prefer Consecutive Days Off<small>Try to give employees back-to-back days off</small></div><label class="toggle"><input type="checkbox" id="s-consec" checked onchange="saveSettings()"><span class="ttrack"></span></label></div>
+  </div>
+  <div class="card"><p style="font-size:12px;color:var(--tx2);line-height:1.7"><strong>Schedy Alpha</strong> — Smart multi-store retail scheduling.<br>Themes: Material Design 3 · Windows 95 · Mac OS 9 (light &amp; dark).<br>Per-day employee availability windows · Sunday/holiday OT · Federal holidays auto-loaded.<br>Excel export with total hours column matching your schedule format.<br>JSON import/export for full persistence.</p></div>
+</div>
 </main>
 </div>
-
-<!-- ═══════════════ STORE DIALOG ═══════════════ -->
-<div class="dialog-backdrop" id="store-dialog">
-  <div class="dialog" style="max-width:640px">
-    <div class="dialog-title"><span class="material-icons-round" style="color:var(--md-primary)">store</span><span id="store-dialog-title">Add Store</span></div>
-
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">Store Name *</label>
-        <input class="form-input" id="store-name" placeholder="e.g. Downtown Location" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Weekly Payroll Budget ($) *</label>
-        <input class="form-input" id="store-budget" placeholder="e.g. 4000" type="number" min="0">
-      </div>
+<!-- STORE DIALOG -->
+<div class="dlg-bd" id="dlg-store"><div class="dlg wide">
+  <div class="dlg-title"><span class="mi">store</span><span id="dst-title">Add Store</span></div>
+  <div class="fgrid"><div class="fg full"><label class="flabel">Store Name *</label><input class="finput" id="st-name" placeholder="e.g. Newport" type="text"></div></div>
+  <div style="margin-top:11px"><div class="flabel" style="margin-bottom:7px">Store Color</div><div class="sws" id="st-swatches"></div></div>
+  <hr class="dv">
+  <div style="font-family:var(--ff);font-size:13px;font-weight:600;margin-bottom:9px">Store Hours</div>
+  <div class="ibox"><span class="mi">info</span>Check open days and set open/close times.</div>
+  <div id="st-hrs"></div>
+  <hr class="dv">
+  <div style="font-family:var(--ff);font-size:13px;font-weight:600;margin-bottom:9px">Overtime Rules</div>
+  <div class="fgrid">
+    <div class="fg"><label class="flabel">Enable Sunday Time-and-a-Half</label>
+      <div class="trow" style="padding:4px 0"><span style="font-size:12px">Apply Sunday OT rate</span><label class="toggle"><input type="checkbox" id="st-sun-ot"><span class="ttrack"></span></label></div>
     </div>
-
-    <div style="margin-top:16px">
-      <div class="form-label" style="margin-bottom:10px">Store Color</div>
-      <div class="color-swatches" id="store-color-swatches"></div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-bottom:12px">Store Hours</div>
-    <div class="info-box" style="margin-bottom:14px">
-      <span class="material-icons-round">info</span>
-      Set open/close times for each day. Leave unchecked for days the store is closed.
-    </div>
-
-    <div id="store-hours-editor"></div>
-
-    <div class="dialog-actions">
-      <button class="btn btn-outlined" onclick="closeDialog('store-dialog')">Cancel</button>
-      <button class="btn btn-filled" onclick="saveStore()">Save Store</button>
-    </div>
+    <div class="fg"><label class="flabel">Sunday OT Rate (1.0=regular)</label><input class="finput" type="number" id="st-sun-rate" step="0.05" min="1" max="3" value="1.5"></div>
+    <div class="fg"><label class="flabel">Holiday Rate Override (blank=global)</label><input class="finput" type="number" id="st-hol-rate" step="0.05" min="1" max="3" placeholder="e.g. 1.5"></div>
   </div>
-</div>
-
-<!-- ═══════════════ EMPLOYEE DIALOG ═══════════════ -->
-<div class="dialog-backdrop" id="employee-dialog">
-  <div class="dialog" style="max-width:680px">
-    <div class="dialog-title"><span class="material-icons-round" style="color:var(--md-primary)">person</span><span id="emp-dialog-title">Add Employee</span></div>
-
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">Full Name *</label>
-        <input class="form-input" id="emp-name" placeholder="e.g. Alex Johnson" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hourly Wage ($) *</label>
-        <input class="form-input" id="emp-wage" placeholder="e.g. 15.50" type="number" step="0.01" min="0">
-      </div>
-    </div>
-
-    <div class="form-grid" style="margin-top:12px">
-      <div class="form-group">
-        <label class="form-label">Min Weekly Hours</label>
-        <input class="form-input" id="emp-min-weekly" placeholder="e.g. 20" type="number" min="0" value="20">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Max Weekly Hours</label>
-        <input class="form-input" id="emp-max-weekly" placeholder="e.g. 40" type="number" min="0" value="40">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Min Daily Hours</label>
-        <input class="form-input" id="emp-min-daily" placeholder="e.g. 4" type="number" min="0" value="4">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Max Daily Hours</label>
-        <input class="form-input" id="emp-max-daily" placeholder="e.g. 10" type="number" min="0" value="10">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Days Off Per Week</label>
-        <select class="form-select" id="emp-days-off">
-          <option value="1">1 day off</option>
-          <option value="2" selected>2 days off</option>
-          <option value="3">3 days off</option>
-          <option value="4">4 days off</option>
-          <option value="5">5 days off</option>
-        </select>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-bottom:10px">Allowed Stores</div>
-    <div class="checkbox-group" id="emp-stores-checkboxes"></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-bottom:10px">Availability</div>
-    <div class="info-box" style="margin-bottom:12px"><span class="material-icons-round">info</span>Check days this employee is available to work.</div>
-    <div class="checkbox-group" id="emp-availability"></div>
-
-    <div class="dialog-actions">
-      <button class="btn btn-outlined" onclick="closeDialog('employee-dialog')">Cancel</button>
-      <button class="btn btn-filled" onclick="saveEmployee()">Save Employee</button>
-    </div>
+  <div class="dlg-acts"><button class="btn btn-out" onclick="closeDlg('dlg-store')">Cancel</button><button class="btn btn-pri" onclick="saveStore()"><span class="mi">save</span>Save Store</button></div>
+</div></div>
+<!-- EMPLOYEE DIALOG -->
+<div class="dlg-bd" id="dlg-emp"><div class="dlg xl">
+  <div class="dlg-title"><span class="mi">person</span><span id="det-title">Add Employee</span></div>
+  <div class="fgrid">
+    <div class="fg"><label class="flabel">Full Name *</label><input class="finput" id="em-name" placeholder="Alex Johnson" type="text"></div>
+    <div class="fg"><label class="flabel">Hourly Wage ($) *</label><input class="finput" id="em-wage" placeholder="16.00" type="number" step="0.01" min="0"></div>
+    <div class="fg"><label class="flabel">Min Weekly Hrs</label><input class="finput" id="em-minwk" type="number" min="0" value="20"></div>
+    <div class="fg"><label class="flabel">Max Weekly Hrs</label><input class="finput" id="em-maxwk" type="number" min="0" value="40"></div>
+    <div class="fg"><label class="flabel">Min Daily Hrs</label><input class="finput" id="em-minday" type="number" min="0" value="4"></div>
+    <div class="fg"><label class="flabel">Max Daily Hrs</label><input class="finput" id="em-maxday" type="number" min="0" value="10"></div>
+    <div class="fg"><label class="flabel">Days Off / Week</label><select class="fsel" id="em-doff"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
   </div>
-</div>
+  <hr class="dv"><div class="slbl">Allowed Stores</div><div class="chips" id="em-stores"></div>
+  <hr class="dv">
+  <div class="slbl">Per-Day Availability</div>
+  <div class="ibox"><span class="mi">info</span>Check each day this employee is available. Set earliest start and latest end times. Leave blank to use store hours.</div>
+  <div style="overflow-x:auto"><table class="avail-tbl"><thead><tr><th>Day</th><th>Available</th><th>Earliest Start</th><th>Latest End</th></tr></thead><tbody id="em-avail-body"></tbody></table></div>
+  <div class="dlg-acts"><button class="btn btn-out" onclick="closeDlg('dlg-emp')">Cancel</button><button class="btn btn-pri" onclick="saveEmp()"><span class="mi">save</span>Save Employee</button></div>
+</div></div>
+<!-- BUDGET DIALOG -->
+<div class="dlg-bd" id="dlg-budget"><div class="dlg">
+  <div class="dlg-title"><span class="mi">payments</span>Weekly Payroll Budgets</div>
+  <div class="ibox"><span class="mi">info</span>Budgets are saved per week — setting for <strong id="bud-wk-lbl">-</strong>.</div>
+  <div id="bud-inputs"></div>
+  <div class="dlg-acts"><button class="btn btn-out" onclick="closeDlg('dlg-budget')">Cancel</button><button class="btn btn-pri" onclick="saveBudgets()"><span class="mi">save</span>Save Budgets</button></div>
+</div></div>
+<!-- HOLIDAY DIALOG -->
+<div class="dlg-bd" id="dlg-hol"><div class="dlg">
+  <div class="dlg-title"><span class="mi">event</span>Mark Custom Holiday / OT Day</div>
+  <div style="font-family:var(--ff);font-size:14px;font-weight:600;margin-bottom:12px" id="hol-date-lbl"></div>
+  <div class="fg" style="margin-bottom:12px"><label class="flabel">Holiday Name / Label</label><input class="finput" id="hol-name-inp" placeholder="e.g. Store Anniversary, State Holiday" type="text"></div>
+  <div class="ibox"><span class="mi">info</span>This day will be flagged during scheduling and the overtime rate will apply to all shifts.</div>
+  <div class="dlg-acts">
+    <button class="btn btn-out" onclick="closeDlg('dlg-hol')">Cancel</button>
+    <button class="btn btn-err btn-sm" id="hol-remove-btn" onclick="removeCustomHol()" style="margin-right:auto">Remove</button>
+    <button class="btn btn-pri" onclick="saveCustomHol()"><span class="mi">save</span>Save Holiday</button>
+  </div>
+</div></div>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-container" id="toast-container"></div>
-
+<div class="toast-wrap" id="tw"></div>
 <script>
-// ══════════════════════════════════════════════════════
-//  DATA MODEL
-// ══════════════════════════════════════════════════════
-const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const STORE_COLORS = ['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#1e88e5','#00897b','#f4511e','#7b1fa2','#c62828','#2e7d32','#0277bd'];
+'use strict';
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const COLORS=['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#1565c0','#00897b','#f4511e','#6a1b9a','#ad1457','#2e7d32','#0277bd','#795548','#607d8b'];
 
-let state = {
-  stores: [],
-  employees: [],
-  schedules: {}, // { "weekKey": { storeId: { day: [ {empId, start, end, lunchBreak} ] } } }
-  settings: {
-    staggerAlone: 3,
-    staggerInterval: 2,
-    overlapBuffer: 30,
-    lunchTrigger: 6,
-    prefFulltime: true,
-    prefFloat: true,
-    prefSpread: true,
-    prefConsec: true
-  }
-};
-
-let editingStoreId = null;
-let editingEmpId = null;
-let currentWeekStart = getWeekStart(new Date());
-let currentStoreTab = null;
-let currentDayTab = 0;
-let selectedStoreColor = STORE_COLORS[0];
-
-// ── ID GENERATOR ──
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-
-// ── WEEK HELPERS ──
-function getWeekStart(d) {
-  const date = new Date(d);
-  date.setHours(0,0,0,0);
-  const day = date.getDay();
-  date.setDate(date.getDate() - day);
-  return date;
-}
-function weekKey(d) { return d.toISOString().slice(0,10); }
-function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
-function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
-function fmtDateFull(d) { return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
-
-// ── TIME HELPERS ──
-function timeToMinutes(t) { const [h,m]= t.split(':').map(Number); return h*60+m; }
-function minutesToTime(m) { const h=Math.floor(m/60),mn=m%60; return `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`; }
-function fmtTime(t) {
-  const [h,m] = t.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const hr = h > 12 ? h-12 : (h===0?12:h);
-  return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
+function getFedHols(yr){
+  const h={};
+  const k=(m,d)=>`${yr}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const nth=(mo,n,wd)=>{let d=new Date(yr,mo-1,1),c=0;while(d.getMonth()===mo-1){if(d.getDay()===wd){c++;if(c===n)return d.getDate()}d.setDate(d.getDate()+1)}};
+  const last=(mo,wd)=>{let d=new Date(yr,mo-1,1),l=null;while(d.getMonth()===mo-1){if(d.getDay()===wd)l=d.getDate();d.setDate(d.getDate()+1)}return l};
+  const fixed=(m,d,name)=>{const dt=new Date(yr,m-1,d);let o=d;if(dt.getDay()===0)o=d+1;else if(dt.getDay()===6)o=d-1;h[k(m,o)]=name};
+  fixed(1,1,"New Year's Day");fixed(6,19,"Juneteenth");fixed(7,4,"Independence Day");
+  fixed(11,11,"Veterans Day");fixed(12,25,"Christmas Day");
+  h[k(1,nth(1,3,1))]="MLK Day";h[k(2,nth(2,3,1))]="Presidents' Day";
+  h[k(5,last(5,1))]="Memorial Day";h[k(9,nth(9,1,1))]="Labor Day";
+  h[k(10,nth(10,2,1))]="Columbus Day";
+  const thx=nth(11,4,4);h[k(11,thx)]="Thanksgiving";h[k(11,thx+1)]="Day After Thanksgiving";
+  return h;
 }
 
-// ── AVATAR COLOR ──
-function avatarColor(name) {
-  const colors = ['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#2e7d32','#0277bd','#7b1fa2'];
-  let h = 0; for(const c of name) h = (h<<5)-h+c.charCodeAt(0);
-  return colors[Math.abs(h)%colors.length];
+let S={stores:[],employees:[],schedules:{},budgets:{},customHols:{},
+  settings:{alone:3,interval:2,lunchTrigger:6,reduce:false,ft:true,spread:true,consec:true,holRate:1.5,otHrs:40,otRate:1.5},
+  theme:'material-light'};
+let _stId=null,_emId=null,_clr=COLORS[0];
+let _wkStart=wkStart(new Date()),_stTab='all',_dayTab=new Date().getDay();
+let _view='day',_calYear=new Date().getFullYear(),_calMonth=new Date().getMonth(),_holPending=null;
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+function wkStart(d){const r=new Date(d);r.setHours(0,0,0,0);r.setDate(r.getDate()-r.getDay());return r}
+function addD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function wk(d){return d.toISOString().slice(0,10)}
+function dKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fmtD(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function t2m(t){if(!t||!t.includes(':'))return 0;const[h,m]=t.split(':').map(Number);return h*60+m}
+function m2t(m){const h=Math.floor(m/60),mn=m%60;return`${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`}
+function fmtT(t){if(!t)return'';const[h,m]=t.split(':').map(Number);return`${h>12?h-12:h===0?12:h}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`}
+function aC(n){const c=['#1a73e8','#00695c','#e8710a','#8430ce','#d93025','#2e7d32','#0277bd','#7b1fa2','#c62828','#0288d1'];let h=0;for(const x of n)h=(h<<5)-h+x.charCodeAt(0);return c[Math.abs(h)%c.length]}
+function ini(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+function netH(sh){const raw=(t2m(sh.end)-t2m(sh.start))/60;return raw>(S.settings.lunchTrigger||6)?raw-.5:raw}
+function effRate(wage,sid,day,ds){
+  let r=1.0;const st=S.stores.find(s=>s.id===sid);
+  if(day===0&&st?.sundayOT)r=Math.max(r,parseFloat(st.sundayOTRate||1.5));
+  const fh=getFedHols(parseInt(ds.slice(0,4)));
+  if(fh[ds]||S.customHols[ds]){const sr=parseFloat(st?.holRateOverride||0)||parseFloat(S.settings.holRate||1.5);r=Math.max(r,sr);}
+  return r;
 }
-function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-
-// ══════════════════════════════════════════════════════
-//  NAV
-// ══════════════════════════════════════════════════════
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  document.getElementById('nav-'+name).classList.add('active');
-
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'stores') renderStores();
-  if (name === 'employees') renderEmployees();
-  if (name === 'schedule') renderSchedulePage();
+function shPay(sh,wage,sid,day,ds){return netH(sh)*parseFloat(wage)*effRate(wage,sid,day,ds)}
+function wkPay(key,sid){
+  const ws=(S.schedules[key]||{})[sid]||{};let t=0;
+  for(let d=0;d<7;d++){const dt=addD(new Date(key),d);for(const sh of(ws[d]||[])){const e=S.employees.find(x=>x.id===sh.empId);if(e)t+=shPay(sh,e.wage,sid,d,dKey(dt));}}
+  return t;
 }
+function isHol(ds){const y=parseInt(ds.slice(0,4));return !!(getFedHols(y)[ds]||S.customHols[ds])}
+function holName(ds){const y=parseInt(ds.slice(0,4));return getFedHols(y)[ds]||(S.customHols[ds]?.name)||null}
 
-// ══════════════════════════════════════════════════════
-//  DASHBOARD
-// ══════════════════════════════════════════════════════
-function renderDashboard() {
-  const wk = weekKey(currentWeekStart);
-  const sched = state.schedules[wk] || {};
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);S.theme=t;document.getElementById('theme-sel').value=t;saveData()}
 
-  // Stats
-  let totalBudget = state.stores.reduce((s,st)=>s+st.budget,0);
-  let totalPayroll = 0;
-  for(const st of state.stores) {
-    const ss = sched[st.id] || {};
-    for(const day of Object.values(ss)) for(const shift of day) {
-      const emp = state.employees.find(e=>e.id===shift.empId);
-      if(emp) totalPayroll += calcShiftPay(shift, emp.wage);
-    }
-  }
-  const budgetPct = totalBudget ? Math.round(totalPayroll/totalBudget*100) : 0;
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('page-'+page).classList.add('on');
+  document.getElementById('nb-'+page).classList.add('on');
+  ({dashboard:renderDash,stores:renderStores,employees:renderEmps,schedule:renderSched,holidays:renderCal,settings:loadSettUI})[page]?.();
+}
+function openDlg(id){document.getElementById(id).classList.add('on')}
+function closeDlg(id){document.getElementById(id).classList.remove('on')}
+document.querySelectorAll('.dlg-bd').forEach(b=>b.addEventListener('click',e=>{if(e.target===b)b.classList.remove('on')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.dlg-bd.on').forEach(b=>b.classList.remove('on'))});
 
-  document.getElementById('dashboard-stats').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-icon" style="background:var(--md-primary-container);color:var(--md-primary)"><span class="material-icons-round">store</span></div>
-      <div><div class="stat-value">${state.stores.length}</div><div class="stat-label">Stores</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:var(--md-secondary-container);color:var(--md-secondary)"><span class="material-icons-round">people</span></div>
-      <div><div class="stat-value">${state.employees.length}</div><div class="stat-label">Employees</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:var(--md-tertiary-container);color:var(--md-tertiary)"><span class="material-icons-round">payments</span></div>
-      <div><div class="stat-value">$${totalBudget.toLocaleString()}</div><div class="stat-label">Weekly Budget</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:${budgetPct>100?'var(--md-error-container)':'var(--md-primary-container)'};color:${budgetPct>100?'var(--md-error)':'var(--md-primary)'}"><span class="material-icons-round">trending_up</span></div>
-      <div><div class="stat-value" style="color:${budgetPct>100?'var(--md-error)':'inherit'}">$${Math.round(totalPayroll).toLocaleString()}</div><div class="stat-label">Scheduled Payroll (${budgetPct}%)</div></div>
-    </div>
-  `;
-
-  // Store cards
-  let cardsHTML = '';
-  if(state.stores.length === 0) {
-    cardsHTML = `<div class="card" style="grid-column:1/-1">
-      <div class="empty-state"><span class="material-icons-round">store</span><h3>No stores yet</h3><p>Add a store to get started.</p><br><button class="btn btn-filled" onclick="showPage('stores')"><span class="material-icons-round">add</span> Add Store</button></div>
-    </div>`;
-  } else {
-    for(const store of state.stores) {
-      const ss = sched[store.id] || {};
-      let storePay = 0;
-      let shifts = 0;
-      for(const day of Object.values(ss)) for(const shift of day) {
-        const emp = state.employees.find(e=>e.id===shift.empId);
-        if(emp) storePay += calcShiftPay(shift, emp.wage);
-        shifts++;
-      }
-      const pct = store.budget ? Math.min(Math.round(storePay/store.budget*100),100) : 0;
-      const over = storePay > store.budget;
-      cardsHTML += `<div class="card">
-        <div class="card-header">
-          <div class="emp-avatar" style="background:${store.color};width:40px;height:40px;border-radius:12px;font-size:18px">${store.name.slice(0,2).toUpperCase()}</div>
-          <div>
-            <div class="card-title">${store.name}</div>
-            <div class="card-subtitle">${shifts} shifts scheduled this week</div>
-          </div>
-        </div>
-        <div class="payroll-bar-container">
-          <div class="payroll-labels"><span>$${Math.round(storePay).toLocaleString()} used</span><span>Budget: $${store.budget.toLocaleString()}</span></div>
-          <div class="payroll-bar-bg"><div class="payroll-bar-fill ${over?'over':pct>85?'close':''}" style="width:${Math.min(pct,100)}%"></div></div>
-        </div>
-        <div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-variant)">
-          ${(store.hours||[]).filter(h=>h.open).map(h=>`<span class="chip chip-surface" style="margin:2px">${DAY_SHORT[h.day]} ${fmtTime(h.openTime)}–${fmtTime(h.closeTime)}</span>`).join('')||'<span style="color:var(--md-on-surface-variant)">No hours set</span>'}
-        </div>
-      </div>`;
-    }
-  }
-  document.getElementById('dashboard-cards').innerHTML = cardsHTML;
+function toast(msg,type=''){
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<span class="mi">${type==='ok'?'check_circle':type==='err'?'error':type==='warn'?'warning':'info'}</span>${msg}`;
+  document.getElementById('tw').appendChild(el);setTimeout(()=>el.remove(),3500);
 }
 
-// ══════════════════════════════════════════════════════
-//  STORES PAGE
-// ══════════════════════════════════════════════════════
-function renderStores() {
-  const el = document.getElementById('stores-list');
-  if(!state.stores.length) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">store</span><h3>No stores added yet</h3><p>Click "Add Store" to create your first location.</p></div></div>`;
-    return;
-  }
-  el.innerHTML = state.stores.map(store => {
-    const empCount = state.employees.filter(e=>e.storeIds&&e.storeIds.includes(store.id)).length;
-    const daysHtml = (store.hours||[]).map(h => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--md-outline-variant)">
-        <span style="width:80px;font-size:13px;font-weight:500;font-family:'Google Sans',sans-serif">${DAYS[h.day]}</span>
-        ${h.open
-          ? `<span class="chip chip-secondary"><span class="material-icons-round" style="font-size:14px">schedule</span>${fmtTime(h.openTime)} – ${fmtTime(h.closeTime)}</span>`
-          : `<span class="chip chip-surface">Closed</span>`
-        }
+// ══ DASHBOARD ══
+function renderDash(){
+  const key=wk(_wkStart);let tb=0,tp=0;
+  for(const st of S.stores){tb+=(S.budgets[key]||{})[st.id]||0;tp+=wkPay(key,st.id);}
+  const pct=tb?Math.round(tp/tb*100):0;
+  document.getElementById('ds-stats').innerHTML=`
+    <div class="sc"><div class="si" style="background:var(--pri-bg);color:var(--pri)"><span class="mi">store</span></div><div><div class="sv">${S.stores.length}</div><div class="sl">Stores</div></div></div>
+    <div class="sc"><div class="si" style="background:var(--sec-bg);color:var(--sec)"><span class="mi">people</span></div><div><div class="sv">${S.employees.length}</div><div class="sl">Employees</div></div></div>
+    <div class="sc"><div class="si" style="background:var(--acc-bg);color:var(--acc)"><span class="mi">payments</span></div><div><div class="sv">$${tb.toLocaleString()}</div><div class="sl">Week Budget</div></div></div>
+    <div class="sc"><div class="si" style="background:${pct>100?'var(--err-bg)':'var(--pri-bg)'};color:${pct>100?'var(--err)':'var(--pri)'}"><span class="mi">trending_up</span></div><div><div class="sv" style="color:${pct>100?'var(--err)':'var(--tx)'}">$${Math.round(tp).toLocaleString()}</div><div class="sl">Payroll (${pct}%)</div></div></div>`;
+  if(!S.stores.length){document.getElementById('ds-stores').innerHTML=`<div class="card"><div class="empty"><span class="mi">store</span><h3>No stores yet</h3><p>Add a store to get started.</p><br><br><button class="btn btn-pri" onclick="nav('stores')"><span class="mi">add</span>Add Store</button></div></div>`;return;}
+  document.getElementById('ds-stores').innerHTML=S.stores.map(st=>{
+    const pay=wkPay(key,st.id),bud=(S.budgets[key]||{})[st.id]||0,pct2=bud?Math.min(Math.round(pay/bud*100),100):0,over=pay>bud&&bud>0;
+    const ec=S.employees.filter(e=>(e.storeIds||[]).includes(st.id)).length;
+    return`<div class="card" style="cursor:pointer" onclick="nav('stores')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:38px;height:38px;border-radius:var(--r2);background:${st.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;font-family:var(--ff)">${ini(st.name)}</div>
+        <div><div style="font-family:var(--ff);font-size:14px;font-weight:700">${st.name}</div><div style="font-size:10px;color:var(--tx2)">${ec} staff · Budget: $${bud.toLocaleString()}/wk</div></div>
       </div>
-    `).join('');
-    return `<div class="card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="emp-avatar" style="background:${store.color};width:48px;height:48px;border-radius:14px;font-size:22px;flex-shrink:0">${store.name.slice(0,2).toUpperCase()}</div>
-          <div>
-            <div style="font-family:'Google Sans',sans-serif;font-size:18px;font-weight:600">${store.name}</div>
-            <div style="font-size:13px;color:var(--md-on-surface-variant);margin-top:2px">Weekly Budget: <strong>$${store.budget.toLocaleString()}</strong> · ${empCount} staff assigned</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-icon" onclick="openStoreDialog('${store.id}')"><span class="material-icons-round">edit</span></button>
-          <button class="btn-icon" onclick="deleteStore('${store.id}')" style="color:var(--md-error)"><span class="material-icons-round">delete</span></button>
-        </div>
-      </div>
-      <hr class="divider">
-      <div class="card-title" style="margin-bottom:10px">Store Hours</div>
-      ${daysHtml}
-    </div>`;
+      <div class="pb"><div class="pb-lbl"><span>$${Math.round(pay).toLocaleString()} used</span><span>${pct2}%</span></div>
+      <div class="pb-bg"><div class="pb-fill ${over?'over':pct2>85?'warn':''}" style="width:${pct2}%"></div></div></div></div>`;
   }).join('');
 }
 
-function openStoreDialog(storeId=null) {
-  editingStoreId = storeId;
-  const store = storeId ? state.stores.find(s=>s.id===storeId) : null;
-  document.getElementById('store-dialog-title').textContent = store ? 'Edit Store' : 'Add Store';
-  document.getElementById('store-name').value = store?.name || '';
-  document.getElementById('store-budget').value = store?.budget || '';
-
-  // Color swatches
-  selectedStoreColor = store?.color || STORE_COLORS[0];
-  document.getElementById('store-color-swatches').innerHTML = STORE_COLORS.map(c =>
-    `<div class="swatch ${c===selectedStoreColor?'selected':''}" style="background:${c}" onclick="selectStoreColor('${c}')"></div>`
-  ).join('');
-
-  // Hours editor
-  const existing = store?.hours || DAYS.map((_,i)=>({day:i,open:false,openTime:'09:00',closeTime:'21:00'}));
-  document.getElementById('store-hours-editor').innerHTML = existing.map((h,i)=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--md-outline-variant)">
-      <label class="checkbox-chip ${h.open?'checked':''}" style="width:90px;justify-content:center" onclick="toggleDayOpen(${i})">
-        <input type="checkbox" ${h.open?'checked':''} id="day-open-${i}"> ${DAYS[i].slice(0,3)}
-      </label>
-      <div style="display:flex;gap:8px;flex:1">
-        <div class="form-group" style="flex:1">
-          <label class="form-label">Open</label>
-          <input class="form-input" type="time" id="day-open-${i}-open" value="${h.openTime}" ${h.open?'':'disabled'} oninput="syncHourInputs()">
-        </div>
-        <div class="form-group" style="flex:1">
-          <label class="form-label">Close</label>
-          <input class="form-input" type="time" id="day-open-${i}-close" value="${h.closeTime}" ${h.open?'':'disabled'} oninput="syncHourInputs()">
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('store-dialog').classList.add('open');
-}
-
-function toggleDayOpen(i) {
-  const cb = document.getElementById(`day-open-${i}`);
-  cb.checked = !cb.checked;
-  const chip = cb.closest('.checkbox-chip');
-  chip.classList.toggle('checked', cb.checked);
-  document.getElementById(`day-open-${i}-open`).disabled = !cb.checked;
-  document.getElementById(`day-open-${i}-close`).disabled = !cb.checked;
-}
-function syncHourInputs() {} // placeholder
-
-function selectStoreColor(c) {
-  selectedStoreColor = c;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.style.background===c));
-}
-
-function saveStore() {
-  const name = document.getElementById('store-name').value.trim();
-  const budget = parseFloat(document.getElementById('store-budget').value);
-  if(!name) { toast('Store name required','error'); return; }
-  if(isNaN(budget)||budget<0) { toast('Valid budget required','error'); return; }
-
-  const hours = DAYS.map((_,i)=>({
-    day: i,
-    open: document.getElementById(`day-open-${i}`)?.checked||false,
-    openTime: document.getElementById(`day-open-${i}-open`)?.value||'09:00',
-    closeTime: document.getElementById(`day-open-${i}-close`)?.value||'21:00'
-  }));
-
-  if(editingStoreId) {
-    const s = state.stores.find(s=>s.id===editingStoreId);
-    s.name=name; s.budget=budget; s.hours=hours; s.color=selectedStoreColor;
-  } else {
-    state.stores.push({id:uid(),name,budget,hours,color:selectedStoreColor});
-  }
-  saveData();
-  closeDialog('store-dialog');
-  renderStores();
-  toast(editingStoreId?'Store updated':'Store added','success');
-}
-
-function deleteStore(id) {
-  if(!confirm('Delete this store? This will remove all associated schedule data.')) return;
-  state.stores = state.stores.filter(s=>s.id!==id);
-  state.employees.forEach(e=>{if(e.storeIds)e.storeIds=e.storeIds.filter(s=>s!==id)});
-  Object.values(state.schedules).forEach(wk=>{delete wk[id]});
-  saveData(); renderStores(); toast('Store deleted');
-}
-
-// ══════════════════════════════════════════════════════
-//  EMPLOYEES PAGE
-// ══════════════════════════════════════════════════════
-function renderEmployees() {
-  const el = document.getElementById('employees-list');
-  if(!state.employees.length) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">people</span><h3>No employees added yet</h3><p>Click "Add Employee" to add your first staff member.</p></div></div>`;
-    return;
-  }
-  el.innerHTML = `<div class="card" style="padding:0;overflow:hidden">
-    <table class="data-table">
-      <thead><tr>
-        <th>Employee</th><th>Wage</th><th>Hours/wk</th><th>Hours/day</th><th>Days Off</th><th>Stores</th><th>Availability</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        ${state.employees.map(emp=>{
-          const stores = (emp.storeIds||[]).map(sid=>{
-            const s = state.stores.find(st=>st.id===sid);
-            return s?`<span class="store-pill" style="background:${s.color}">${s.name}</span>`:''
-          }).join(' ');
-          const avail = (emp.availability||[]).map(d=>DAY_SHORT[d]).join(', ') || 'None';
-          return `<tr>
-            <td>
-              <div style="display:flex;align-items:center;gap:10px">
-                <div class="emp-avatar" style="background:${avatarColor(emp.name)}">${initials(emp.name)}</div>
-                <div>
-                  <div style="font-weight:500;font-family:'Google Sans',sans-serif">${emp.name}</div>
-                  <div style="font-size:11px;color:var(--md-on-surface-variant)">${emp.daysOff||2} day(s) off/wk</div>
-                </div>
-              </div>
-            </td>
-            <td>$${parseFloat(emp.wage).toFixed(2)}/hr</td>
-            <td>${emp.minWeekly}–${emp.maxWeekly}h</td>
-            <td>${emp.minDaily}–${emp.maxDaily}h</td>
-            <td>${emp.daysOff||2}</td>
-            <td>${stores||'<span style="color:var(--md-on-surface-variant)">None</span>'}</td>
-            <td><span style="font-size:12px">${avail}</span></td>
-            <td>
-              <div style="display:flex;gap:4px">
-                <button class="btn-icon" onclick="openEmployeeDialog('${emp.id}')"><span class="material-icons-round">edit</span></button>
-                <button class="btn-icon" onclick="deleteEmployee('${emp.id}')" style="color:var(--md-error)"><span class="material-icons-round">delete</span></button>
-              </div>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-  </div>`;
-}
-
-function openEmployeeDialog(empId=null) {
-  editingEmpId = empId;
-  const emp = empId ? state.employees.find(e=>e.id===empId) : null;
-  document.getElementById('emp-dialog-title').textContent = emp ? 'Edit Employee' : 'Add Employee';
-
-  document.getElementById('emp-name').value = emp?.name||'';
-  document.getElementById('emp-wage').value = emp?.wage||'';
-  document.getElementById('emp-min-weekly').value = emp?.minWeekly??20;
-  document.getElementById('emp-max-weekly').value = emp?.maxWeekly??40;
-  document.getElementById('emp-min-daily').value = emp?.minDaily??4;
-  document.getElementById('emp-max-daily').value = emp?.maxDaily??10;
-  document.getElementById('emp-days-off').value = emp?.daysOff??2;
-
-  // Store checkboxes
-  document.getElementById('emp-stores-checkboxes').innerHTML = state.stores.length
-    ? state.stores.map(s=>`
-      <label class="checkbox-chip ${(emp?.storeIds||[]).includes(s.id)?'checked':''}">
-        <input type="checkbox" value="${s.id}" ${(emp?.storeIds||[]).includes(s.id)?'checked':''}
-          onchange="this.closest('.checkbox-chip').classList.toggle('checked',this.checked)">
-        <span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block"></span>
-        ${s.name}
-      </label>`).join('')
-    : '<span style="color:var(--md-on-surface-variant);font-size:13px">No stores created yet</span>';
-
-  // Availability
-  document.getElementById('emp-availability').innerHTML = DAYS.map((d,i)=>`
-    <label class="checkbox-chip ${(emp?.availability||[]).includes(i)?'checked':''}">
-      <input type="checkbox" value="${i}" ${(emp?.availability||[]).includes(i)?'checked':''}
-        onchange="this.closest('.checkbox-chip').classList.toggle('checked',this.checked)">
-      ${d.slice(0,3)}
-    </label>`).join('');
-
-  document.getElementById('employee-dialog').classList.add('open');
-}
-
-function saveEmployee() {
-  const name = document.getElementById('emp-name').value.trim();
-  const wage = parseFloat(document.getElementById('emp-wage').value);
-  if(!name) { toast('Name required','error'); return; }
-  if(isNaN(wage)||wage<0) { toast('Valid wage required','error'); return; }
-
-  const storeIds = [...document.querySelectorAll('#emp-stores-checkboxes input:checked')].map(i=>i.value);
-  const availability = [...document.querySelectorAll('#emp-availability input:checked')].map(i=>parseInt(i.value));
-  const empData = {
-    name,wage,
-    minWeekly: parseInt(document.getElementById('emp-min-weekly').value)||20,
-    maxWeekly: parseInt(document.getElementById('emp-max-weekly').value)||40,
-    minDaily: parseInt(document.getElementById('emp-min-daily').value)||4,
-    maxDaily: parseInt(document.getElementById('emp-max-daily').value)||10,
-    daysOff: parseInt(document.getElementById('emp-days-off').value)||2,
-    storeIds, availability
-  };
-
-  if(editingEmpId) {
-    const e = state.employees.find(e=>e.id===editingEmpId);
-    Object.assign(e, empData);
-  } else {
-    state.employees.push({id:uid(),...empData});
-  }
-  saveData(); closeDialog('employee-dialog'); renderEmployees();
-  toast(editingEmpId?'Employee updated':'Employee added','success');
-}
-
-function deleteEmployee(id) {
-  if(!confirm('Delete this employee?')) return;
-  state.employees = state.employees.filter(e=>e.id!==id);
-  Object.values(state.schedules).forEach(wk=>{
-    Object.values(wk).forEach(store=>{
-      Object.keys(store).forEach(day=>{store[day]=(store[day]||[]).filter(s=>s.empId!==id)});
-    });
-  });
-  saveData(); renderEmployees(); toast('Employee deleted');
-}
-
-// ══════════════════════════════════════════════════════
-//  SCHEDULE PAGE
-// ══════════════════════════════════════════════════════
-function renderSchedulePage() {
-  updateWeekDisplay();
-  renderStoreTabs();
-  renderDayTabs();
-  renderScheduleContent();
-}
-
-function updateWeekDisplay() {
-  const end = addDays(currentWeekStart, 6);
-  document.getElementById('week-display').textContent = `${fmtDate(currentWeekStart)} – ${fmtDate(end)}`;
-}
-
-function previousWeek() { currentWeekStart = addDays(currentWeekStart,-7); renderSchedulePage(); }
-function nextWeek() { currentWeekStart = addDays(currentWeekStart,7); renderSchedulePage(); }
-function goToToday() { currentWeekStart = getWeekStart(new Date()); currentDayTab=new Date().getDay(); renderSchedulePage(); }
-
-function renderStoreTabs() {
-  const el = document.getElementById('schedule-store-tabs');
-  if(!state.stores.length) { el.innerHTML=''; return; }
-  if(!currentStoreTab || !state.stores.find(s=>s.id===currentStoreTab)) currentStoreTab = state.stores[0].id;
-  el.innerHTML = `<button class="tab ${currentStoreTab==='all'?'active':''}" onclick="setStoreTab('all')">All Stores</button>`
-    + state.stores.map(s=>`<button class="tab ${currentStoreTab===s.id?'active':''}" onclick="setStoreTab('${s.id}')">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px"></span>${s.name}
-    </button>`).join('');
-}
-
-function setStoreTab(id) { currentStoreTab=id; renderStoreTabs(); renderScheduleContent(); }
-
-function renderDayTabs() {
-  const el = document.getElementById('schedule-day-tabs');
-  el.innerHTML = DAY_SHORT.map((d,i)=>{
-    const date = addDays(currentWeekStart,i);
-    return `<button class="day-tab ${currentDayTab===i?'active':''}" onclick="setDayTab(${i})">
-      ${d} <span style="font-size:11px;display:block">${fmtDate(date)}</span>
-    </button>`;
+// ══ STORES ══
+function renderStores(){
+  const el=document.getElementById('stores-list');
+  if(!S.stores.length){el.innerHTML=`<div class="card"><div class="empty"><span class="mi">store</span><h3>No stores yet</h3><p>Click Add Store above.</p></div></div>`;return;}
+  el.innerHTML=S.stores.map(st=>{
+    const ec=S.employees.filter(e=>(e.storeIds||[]).includes(st.id)).length;
+    const hrs=(st.hours||[]).map(h=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr2)"><span style="width:80px;font-size:11px;font-weight:600;font-family:var(--ff)">${DAYS[h.day]}</span>${h.open?`<span class="badge bs">${fmtT(h.openTime)} - ${fmtT(h.closeTime)}</span>`:`<span class="badge bn">Closed</span>`}${h.day===0&&st.sundayOT?`<span class="badge bw">Sun OT x${st.sundayOTRate||1.5}</span>`:''}</div>`).join('');
+    return`<div class="card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:44px;border-radius:var(--r2);background:${st.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;font-family:var(--ff);flex-shrink:0">${ini(st.name)}</div>
+      <div><div style="font-family:var(--ff);font-size:15px;font-weight:700">${st.name}</div><div style="font-size:11px;color:var(--tx2);margin-top:2px">${ec} staff${st.sundayOT?` · Sun OT x${st.sundayOTRate||1.5}`:''}</div></div></div>
+      <div style="display:flex;gap:3px;flex-shrink:0"><button class="ib" onclick="openStoreDlg('${st.id}')"><span class="mi">edit</span></button><button class="ib del" onclick="delStore('${st.id}')"><span class="mi">delete</span></button></div>
+    </div><hr class="dv"><div class="slbl" style="margin-top:0">Store Hours</div>${hrs}</div>`;
   }).join('');
 }
-function setDayTab(i) { currentDayTab=i; renderDayTabs(); renderScheduleContent(); }
-
-function calcShiftPay(shift, wage) {
-  const mins = timeToMinutes(shift.end) - timeToMinutes(shift.start);
-  const hours = mins/60 - (shift.lunchBreak?0.5:0);
-  return Math.max(0,hours) * parseFloat(wage);
+function openStoreDlg(id=null){
+  _stId=id;const st=id?S.stores.find(s=>s.id===id):null;
+  document.getElementById('dst-title').textContent=st?'Edit Store':'Add Store';
+  document.getElementById('st-name').value=st?.name||'';
+  document.getElementById('st-sun-ot').checked=st?.sundayOT||false;
+  document.getElementById('st-sun-rate').value=st?.sundayOTRate||1.5;
+  document.getElementById('st-hol-rate').value=st?.holRateOverride||'';
+  _clr=st?.color||COLORS[0];
+  document.getElementById('st-swatches').innerHTML=COLORS.map(c=>`<div class="swd ${c===_clr?'on':''}" style="background:${c}" onclick="pickClr('${c}')"></div>`).join('');
+  const ex=st?.hours||DAYS.map((_,i)=>({day:i,open:false,openTime:'10:00',closeTime:'18:00'}));
+  document.getElementById('st-hrs').innerHTML=ex.map((h,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr2)">
+    <label class="chip-cb ${h.open?'on':''}" style="min-width:68px;justify-content:center"><input type="checkbox" id="do-${i}" ${h.open?'checked':''} onchange="togDay(${i})">${DAYS[i].slice(0,3)}</label>
+    <div style="display:flex;gap:7px;flex:1">
+      <div class="fg" style="flex:1"><label class="flabel">Open</label><input class="finput" type="time" id="dot-${i}" value="${h.openTime}" ${h.open?'':'disabled'}></div>
+      <div class="fg" style="flex:1"><label class="flabel">Close</label><input class="finput" type="time" id="dct-${i}" value="${h.closeTime}" ${h.open?'':'disabled'}></div>
+    </div></div>`).join('');
+  openDlg('dlg-store');
+}
+function togDay(i){const cb=document.getElementById(`do-${i}`);cb.checked=!cb.checked;cb.closest('.chip-cb').classList.toggle('on',cb.checked);document.getElementById(`dot-${i}`).disabled=!cb.checked;document.getElementById(`dct-${i}`).disabled=!cb.checked;}
+function pickClr(c){_clr=c;document.querySelectorAll('#st-swatches .swd').forEach(d=>d.classList.toggle('on',d.style.background===c));}
+function saveStore(){
+  const name=document.getElementById('st-name').value.trim();
+  if(!name){toast('Store name required','err');return;}
+  const hrs=DAYS.map((_,i)=>({day:i,open:document.getElementById(`do-${i}`)?.checked||false,openTime:document.getElementById(`dot-${i}`)?.value||'10:00',closeTime:document.getElementById(`dct-${i}`)?.value||'18:00'}));
+  const data={name,color:_clr,hours:hrs,sundayOT:document.getElementById('st-sun-ot').checked,sundayOTRate:parseFloat(document.getElementById('st-sun-rate').value)||1.5,holRateOverride:parseFloat(document.getElementById('st-hol-rate').value)||0};
+  if(_stId)Object.assign(S.stores.find(s=>s.id===_stId),data);else S.stores.push({id:uid(),...data});
+  saveData();closeDlg('dlg-store');renderStores();toast(_stId?'Store updated':'Store added','ok');
+}
+function delStore(id){
+  if(!confirm('Delete this store?'))return;
+  S.stores=S.stores.filter(s=>s.id!==id);
+  S.employees.forEach(e=>{if(e.storeIds)e.storeIds=e.storeIds.filter(s=>s!==id);});
+  Object.values(S.schedules).forEach(w=>{delete w[id];});Object.values(S.budgets).forEach(w=>{delete w[id];});
+  saveData();renderStores();toast('Store deleted');
 }
 
-function renderScheduleContent() {
-  const el = document.getElementById('schedule-content');
-  const wk = weekKey(currentWeekStart);
-  const sched = state.schedules[wk] || {};
-  const storeIds = currentStoreTab==='all' ? state.stores.map(s=>s.id) : [currentStoreTab];
+// ══ EMPLOYEES ══
+function renderEmps(){
+  const el=document.getElementById('emp-list');
+  if(!S.employees.length){el.innerHTML=`<div class="card"><div class="empty"><span class="mi">people</span><h3>No employees yet</h3><p>Click Add Employee above.</p></div></div>`;return;}
+  el.innerHTML=`<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr>
+    <th>Employee</th><th>Wage</th><th>Hrs/wk</th><th>Hrs/day</th><th>Days Off</th><th>Stores</th><th>Available Days</th><th></th>
+  </tr></thead><tbody>${S.employees.map(em=>{
+    const sc=(em.storeIds||[]).map(sid=>{const st=S.stores.find(s=>s.id===sid);return st?`<span style="display:inline-flex;align-items:center;gap:3px;background:${st.color};color:#fff;border-radius:var(--rp);padding:2px 7px;font-size:9px;font-weight:700;margin:1px">${st.name}</span>`:''}).join('');
+    const av=Object.entries(em.dayAvail||{}).filter(([,v])=>v&&v.on).map(([d])=>DS[parseInt(d)]).join(', ')||'--';
+    return`<tr onclick="openEmpDlg('${em.id}')">
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="av" style="background:${aC(em.name)}">${ini(em.name)}</div><div><div style="font-weight:600;font-family:var(--ff);font-size:12px">${em.name}</div><div style="font-size:9px;color:var(--tx3)">${em.doff||2}d off/wk</div></div></div></td>
+      <td>$${parseFloat(em.wage).toFixed(2)}/hr</td><td>${em.minWk}-${em.maxWk}h</td><td>${em.minDay}-${em.maxDay}h</td><td>${em.doff||2}</td>
+      <td>${sc||'<span style="color:var(--tx3)">None</span>'}</td><td style="font-size:10px">${av}</td>
+      <td onclick="event.stopPropagation()"><div style="display:flex;gap:2px"><button class="ib" onclick="openEmpDlg('${em.id}')"><span class="mi">edit</span></button><button class="ib del" onclick="delEmp('${em.id}')"><span class="mi">delete</span></button></div></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function openEmpDlg(id=null){
+  _emId=id;const em=id?S.employees.find(e=>e.id===id):null;
+  document.getElementById('det-title').textContent=em?'Edit Employee':'Add Employee';
+  document.getElementById('em-name').value=em?.name||'';document.getElementById('em-wage').value=em?.wage||'';
+  document.getElementById('em-minwk').value=em?.minWk??20;document.getElementById('em-maxwk').value=em?.maxWk??40;
+  document.getElementById('em-minday').value=em?.minDay??4;document.getElementById('em-maxday').value=em?.maxDay??10;
+  document.getElementById('em-doff').value=em?.doff??2;
+  document.getElementById('em-stores').innerHTML=S.stores.length
+    ?S.stores.map(st=>`<label class="chip-cb ${(em?.storeIds||[]).includes(st.id)?'on':''}"><input type="checkbox" value="${st.id}" ${(em?.storeIds||[]).includes(st.id)?'checked':''} onchange="this.closest('.chip-cb').classList.toggle('on',this.checked)"><span style="width:8px;height:8px;border-radius:50%;background:${st.color};display:inline-block"></span>${st.name}</label>`).join('')
+    :'<span style="color:var(--tx3);font-size:11px">Add stores first</span>';
+  const da=em?.dayAvail||{};
+  document.getElementById('em-avail-body').innerHTML=DAYS.map((d,i)=>{
+    const v=da[i]||{on:false,earliest:'',latest:''};
+    return`<tr><td>${d}</td>
+      <td><label class="chip-cb ${v.on?'on':''}" style="justify-content:center;padding:3px 8px"><input type="checkbox" id="da-on-${i}" ${v.on?'checked':''} onchange="this.closest('.chip-cb').classList.toggle('on',this.checked)">Yes</label></td>
+      <td><input class="finput at-inp" type="time" id="da-es-${i}" value="${v.earliest||''}"></td>
+      <td><input class="finput at-inp" type="time" id="da-le-${i}" value="${v.latest||''}"></td>
+    </tr>`;
+  }).join('');
+  openDlg('dlg-emp');
+}
+function saveEmp(){
+  const name=document.getElementById('em-name').value.trim();
+  const wage=parseFloat(document.getElementById('em-wage').value);
+  if(!name){toast('Name required','err');return;}if(isNaN(wage)||wage<0){toast('Valid wage required','err');return;}
+  const storeIds=[...document.querySelectorAll('#em-stores input:checked')].map(i=>i.value);
+  const dayAvail={};
+  for(let i=0;i<7;i++)dayAvail[i]={on:document.getElementById(`da-on-${i}`)?.checked||false,earliest:document.getElementById(`da-es-${i}`)?.value||'',latest:document.getElementById(`da-le-${i}`)?.value||''};
+  const data={name,wage,minWk:parseInt(document.getElementById('em-minwk').value)||20,maxWk:parseInt(document.getElementById('em-maxwk').value)||40,minDay:parseInt(document.getElementById('em-minday').value)||4,maxDay:parseInt(document.getElementById('em-maxday').value)||10,doff:parseInt(document.getElementById('em-doff').value)||2,storeIds,dayAvail};
+  if(_emId)Object.assign(S.employees.find(e=>e.id===_emId),data);else S.employees.push({id:uid(),...data});
+  saveData();closeDlg('dlg-emp');renderEmps();toast(_emId?'Employee updated':'Employee added','ok');
+}
+function delEmp(id){if(!confirm('Delete this employee?'))return;S.employees=S.employees.filter(e=>e.id!==id);saveData();renderEmps();toast('Employee deleted');}
 
-  if(!state.stores.length) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><span class="material-icons-round">store</span><h3>No stores yet</h3><p>Add stores first.</p></div></div>`;
-    return;
-  }
-
-  let html = '';
-  let hasAnyShift = false;
-
-  for(const storeId of storeIds) {
-    const store = state.stores.find(s=>s.id===storeId);
-    if(!store) continue;
-    const storeSched = sched[storeId] || {};
-    const dayShifts = storeSched[currentDayTab] || [];
-    const storeHours = (store.hours||[]).find(h=>h.day===currentDayTab);
-
-    if(!storeHours?.open) {
-      if(storeIds.length===1) {
-        html += `<div class="card"><div class="empty-state"><span class="material-icons-round">store_mall_directory</span><h3>${store.name} is closed ${DAYS[currentDayTab]}</h3><p>No shifts needed.</p></div></div>`;
-      }
-      continue;
-    }
-
-    if(dayShifts.length>0) hasAnyShift=true;
-
-    // Compute timeline range
-    const openMin = timeToMinutes(storeHours.openTime);
-    const closeMin = timeToMinutes(storeHours.closeTime);
-    const totalMins = closeMin - openMin;
-
-    // Payroll for this store this day
-    let dayPay = 0;
-    for(const sh of dayShifts) {
-      const emp = state.employees.find(e=>e.id===sh.empId);
-      if(emp) dayPay += calcShiftPay(sh,emp.wage);
-    }
-
-    html += `<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-      <div style="padding:14px 16px;background:${store.color};color:white;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-family:'Google Sans',sans-serif;font-weight:600;font-size:16px">${store.name} — ${DAYS[currentDayTab]}</div>
-        <div style="font-size:13px">${fmtTime(storeHours.openTime)} – ${fmtTime(storeHours.closeTime)} · ${dayShifts.length} shifts · $${dayPay.toFixed(2)} payroll</div>
-      </div>`;
-
-    if(!dayShifts.length) {
-      html += `<div style="padding:32px;text-align:center;color:var(--md-on-surface-variant)"><span class="material-icons-round" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4">event_busy</span>No shifts scheduled. Click "Generate Schedule".</div>`;
-    } else {
-      // Timeline
-      const hourLabels = [];
-      for(let m=openMin;m<=closeMin;m+=60) hourLabels.push(m);
-      const hoursRange = (closeMin-openMin)/60;
-
-      html += `<div class="schedule-container"><div class="schedule-grid">
-        <div class="schedule-header-row">
-          <div class="schedule-emp-col">Employee</div>
-          <div class="schedule-hours">
-            ${hourLabels.map(m=>`<div class="hour-tick">${fmtTime(minutesToTime(m))}</div>`).join('')}
-          </div>
-        </div>`;
-
-      for(const shift of dayShifts) {
-        const emp = state.employees.find(e=>e.id===shift.empId);
-        if(!emp) continue;
-        const startM = timeToMinutes(shift.start);
-        const endM = timeToMinutes(shift.end);
-        const leftPct = ((startM-openMin)/totalMins)*100;
-        const widthPct = ((endM-startM)/totalMins)*100;
-        const color = avatarColor(emp.name);
-        const pay = calcShiftPay(shift,emp.wage);
-
-        // Lunch position (halfway)
-        let lunchHtml = '';
-        if(shift.lunchBreak) {
-          const lunchStart = startM + (endM-startM)/2 - 15;
-          const lunchLeft = ((lunchStart-openMin)/totalMins)*100;
-          const lunchW = (30/totalMins)*100;
-          lunchHtml = `<div class="lunch-block" style="left:${lunchLeft}%;width:${lunchW}%" title="30 min lunch">L</div>`;
-        }
-
-        html += `<div class="schedule-row">
-          <div class="schedule-emp-name">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="emp-avatar" style="background:${color};width:28px;height:28px;font-size:12px">${initials(emp.name)}</div>
-              <div>
-                <div>${emp.name}</div>
-                <div class="schedule-emp-store">$${pay.toFixed(2)}</div>
-              </div>
-            </div>
-          </div>
-          <div class="schedule-timeline">
-            ${hourLabels.map((m,i)=>`<div class="hour-line" style="left:${(i/(hourLabels.length-1))*100}%"></div>`).join('')}
-            <div class="shift-block" style="left:${leftPct}%;width:${widthPct}%;background:${color}" title="${emp.name}: ${fmtTime(shift.start)}–${fmtTime(shift.end)}${shift.lunchBreak?' (30m lunch)':''}">
-              ${fmtTime(shift.start)}–${fmtTime(shift.end)}
-            </div>
-            ${lunchHtml}
-          </div>
-        </div>`;
-      }
-      html += `</div></div>`;
-    }
-    html += `</div>`;
-  }
-
-  if(!html) {
-    html = `<div class="card"><div class="empty-state"><span class="material-icons-round">calendar_today</span><h3>Nothing to show</h3><p>Select a store tab or generate a schedule.</p></div></div>`;
-  } else if(!hasAnyShift && state.employees.length) {
-    html = `<div class="warning-box"><span class="material-icons-round">warning</span><div><strong>No schedule generated yet for this week.</strong><br>Click "Generate Schedule" to auto-create optimized shifts based on store hours, employee availability, and payroll budgets.</div></div>` + html;
-  }
-
-  el.innerHTML = html;
+// ══ BUDGETS ══
+function openBudgetDlg(){
+  const key=wk(_wkStart);
+  document.getElementById('bud-wk-lbl').textContent=`${fmtD(_wkStart)} - ${fmtD(addD(_wkStart,6))}`;
+  document.getElementById('bud-inputs').innerHTML=S.stores.length
+    ?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;margin-top:8px">${S.stores.map(st=>`<div class="fg"><label class="flabel" style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${st.color};display:inline-block"></span>${st.name}</label><input class="finput" type="number" id="bud-${st.id}" min="0" step="50" placeholder="e.g. 4000" value="${(S.budgets[key]||{})[st.id]||''}"></div>`).join('')}</div>`
+    :'<p style="color:var(--tx2);font-size:11px;margin-top:8px">Add stores first.</p>';
+  openDlg('dlg-budget');
+}
+function saveBudgets(){
+  const key=wk(_wkStart);if(!S.budgets[key])S.budgets[key]={};
+  for(const st of S.stores){const v=parseFloat(document.getElementById(`bud-${st.id}`)?.value||0);S.budgets[key][st.id]=isNaN(v)?0:v;}
+  saveData();closeDlg('dlg-budget');toast('Budgets saved','ok');renderSched();
 }
 
-// ══════════════════════════════════════════════════════
-//  SCHEDULE GENERATION ENGINE
-// ══════════════════════════════════════════════════════
-function generateSchedule() {
-  if(!state.stores.length) { toast('Add stores first','error'); return; }
-  if(!state.employees.length) { toast('Add employees first','error'); return; }
+// ══ SCHEDULE PAGE ══
+function prevWk(){_wkStart=addD(_wkStart,-7);renderSched();}
+function nextWk(){_wkStart=addD(_wkStart,7);renderSched();}
+function goToday(){_wkStart=wkStart(new Date());_dayTab=new Date().getDay();renderSched();}
+function setView(v){
+  _view=v;
+  document.getElementById('vt-day').classList.toggle('on',v==='day');
+  document.getElementById('vt-week').classList.toggle('on',v==='week');
+  document.getElementById('d-tabs-wrap').style.display=v==='day'?'':'none';
+  renderSchedContent();
+}
+function renderSched(){
+  document.getElementById('wk-lbl').textContent=`${fmtD(_wkStart)} - ${fmtD(addD(_wkStart,6))}`;
+  renderStoreTabs();renderDayTabs();renderSchedContent();
+}
+function renderStoreTabs(){
+  if(!S.stores.find(s=>s.id===_stTab)&&_stTab!=='all')_stTab='all';
+  document.getElementById('s-tabs').innerHTML=`<button class="stab ${_stTab==='all'?'on':''}" onclick="setStTab('all')">All Stores</button>`
+    +S.stores.map(st=>`<button class="stab ${_stTab===st.id?'on':''}" onclick="setStTab('${st.id}')"><span class="sdot" style="background:${st.color}"></span>${st.name}</button>`).join('');
+}
+function setStTab(id){_stTab=id;renderStoreTabs();renderSchedContent();}
+function renderDayTabs(){
+  document.getElementById('d-tabs').innerHTML=DS.map((d,i)=>{
+    const date=addD(_wkStart,i),ds=dKey(date);
+    const sids=_stTab==='all'?S.stores.map(s=>s.id):[_stTab];
+    const closed=sids.every(sid=>{const st=S.stores.find(s=>s.id===sid);return!(st?.hours||[]).find(h=>h.day===i&&h.open);});
+    const hol=isHol(ds);
+    return`<button class="dtab ${_dayTab===i?'on':''} ${closed?'closed':''} ${hol?'hol':''}" onclick="setDayTab(${i})">${d}<br><span style="font-size:8px">${fmtD(date)}${hol?' ★':''}</span></button>`;
+  }).join('');
+}
+function setDayTab(i){_dayTab=i;renderDayTabs();renderSchedContent();}
+function renderSchedContent(){if(_view==='week')renderWeekView();else renderDayView();}
 
-  const wk = weekKey(currentWeekStart);
-  const settings = state.settings;
-  const staggerAlone = parseInt(settings.staggerAlone)||3;
-  const staggerInterval = parseInt(settings.staggerInterval)||2;
-  const lunchTrigger = parseFloat(settings.lunchTrigger)||6;
+function renderDayView(){
+  const key=wk(_wkStart),sched=S.schedules[key]||{},sids=_stTab==='all'?S.stores.map(s=>s.id):[_stTab];
+  const el=document.getElementById('sched-content');
+  const date=addD(_wkStart,_dayTab),ds=dKey(date);
+  if(!S.stores.length){el.innerHTML=`<div class="card"><div class="empty"><span class="mi">store</span><h3>No stores yet</h3></div></div>`;return;}
+  let html='',anyGen=false;
+  const hn=holName(ds);
+  if(hn)html+=`<div class="hol-info"><span class="mi">event</span><strong>Holiday: ${hn}</strong> — overtime rate applies to all shifts today</div>`;
+  for(const sid of sids){
+    const st=S.stores.find(s=>s.id===sid);if(!st)continue;
+    const stH=(st.hours||[]).find(h=>h.day===_dayTab);
+    if(!stH?.open){if(sids.length===1)html+=`<div class="card"><div class="empty"><span class="mi">store_mall_directory</span><h3>${st.name} is closed ${DAYS[_dayTab]}</h3></div></div>`;continue;}
+    const shifts=(sched[sid]||{})[_dayTab]||[];
+    if(shifts.length)anyGen=true;
+    const oM=t2m(stH.openTime),cM=t2m(stH.closeTime),totM=cM-oM;
+    const bud=(S.budgets[key]||{})[sid]||0;
+    const isSunOT=_dayTab===0&&st.sundayOT;
+    const dayPay=shifts.reduce((s,sh)=>{const e=S.employees.find(x=>x.id===sh.empId);return s+(e?shPay(sh,e.wage,sid,_dayTab,ds):0);},0);
+    const hlbls=[];for(let m=oM;m<=cM;m+=60)hlbls.push(m);
+    const rows=shifts.map(sh=>{
+      const em=S.employees.find(e=>e.id===sh.empId);if(!em)return'';
+      const sM=t2m(sh.start),eM=t2m(sh.end);
+      const lp=Math.max(0,((sM-oM)/totM)*100),wp=Math.max(1,Math.min(100,((eM-sM)/totM)*100));
+      const col=aC(em.name),nh=netH(sh),rate=effRate(em.wage,sid,_dayTab,ds),pay=shPay(sh,em.wage,sid,_dayTab,ds);
+      let lpip='';
+      if(sh.lunchBreak){const lm=sM+(eM-sM)/2-15;const ll=Math.max(0,((lm-oM)/totM)*100);const lw=(30/totM)*100;lpip=`<div class="lpip" style="left:${ll}%;width:${lw}%">L</div>`;}
+      return`<div class="sr">
+        <div class="semp"><div class="av" style="background:${col}">${ini(em.name)}</div><div><div class="en">${em.name}</div><div class="es">${nh.toFixed(1)}h $${pay.toFixed(2)}${rate>1?` (x${rate})`:''}</div></div></div>
+        <div class="stl">${hlbls.map((_,i2)=>`<div class="hl" style="left:${(i2/Math.max(hlbls.length-1,1))*100}%"></div>`).join('')}
+          <div class="sbar ${rate>1?'ot':''}" style="left:${lp}%;width:${wp}%;background:${col}">${fmtT(sh.start)}-${fmtT(sh.end)}</div>${lpip}
+        </div></div>`;
+    }).join('');
+    html+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+      <div class="sbanner" style="background:${st.color}"><span>${st.name} — ${DAYS[_dayTab]}</span>
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${hn?`<span class="hbadge">Holiday OT</span>`:''} ${isSunOT?`<span class="hbadge">Sun OT x${st.sundayOTRate||1.5}</span>`:''}
+          <span style="font-size:11px;opacity:.9">${fmtT(stH.openTime)}-${fmtT(stH.closeTime)} · ${shifts.length} shifts · $${dayPay.toFixed(2)}${bud?` / $${bud.toLocaleString()}`:''}</span>
+        </div>
+      </div>
+      ${shifts.length
+        ?`<div class="sg-wrap"><div class="sg"><div class="sg-head"><div class="sg-ec">Employee</div><div class="sg-th">${hlbls.map(m=>`<div class="htick">${fmtT(m2t(m))}</div>`).join('')}</div></div>${rows}</div></div>`
+        :`<div style="padding:24px;text-align:center;color:var(--tx2)"><span class="mi" style="font-size:32px;display:block;opacity:.3;margin-bottom:6px">event_busy</span>No shifts — click Generate</div>`}
+    </div>`;
+  }
+  if(!anyGen&&S.employees.length&&html.includes('sbanner'))
+    html=`<div class="wbox"><span class="mi">warning</span><div><strong>No schedule generated yet.</strong> Click <strong>Generate</strong> above. Set this week's payroll with <strong>Budgets</strong>.</div></div>`+html;
+  el.innerHTML=html||`<div class="card"><div class="empty"><span class="mi">calendar_today</span><h3>Nothing to show</h3></div></div>`;
+}
 
-  // Initialize schedule for this week
-  const newSched = {};
+function renderWeekView(){
+  const key=wk(_wkStart),sched=S.schedules[key]||{},sids=_stTab==='all'?S.stores.map(s=>s.id):[_stTab];
+  const el=document.getElementById('sched-content');
+  if(!S.stores.length){el.innerHTML=`<div class="card"><div class="empty"><span class="mi">store</span><h3>No stores yet</h3></div></div>`;return;}
+  let html='';
+  for(const sid of sids){
+    const st=S.stores.find(s=>s.id===sid);if(!st)continue;
+    const empSet=new Set();
+    for(let d=0;d<7;d++)((sched[sid]||{})[d]||[]).forEach(sh=>empSet.add(sh.empId));
+    S.employees.filter(e=>(e.storeIds||[]).includes(sid)).forEach(e=>empSet.add(e.id));
+    const emps=[...empSet].map(id=>S.employees.find(e=>e.id===id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const wkBud=(S.budgets[key]||{})[sid]||0,wkTotal=wkPay(key,sid);
+    let thead=`<tr><th style="background:${st.color}">${st.name}</th>`;
+    for(let d=0;d<7;d++){
+      const date=addD(_wkStart,d),ds=dKey(date),hn=holName(ds),isSunOT=d===0&&st.sundayOT;
+      const stH=(st.hours||[]).find(h=>h.day===d);
+      thead+=`<th style="background:${st.color}">${DS[d]}<br><span style="font-size:8px;font-weight:400;opacity:.85">${fmtD(date)}${hn?' ★':''}${isSunOT?' S':''}</span><br><span style="font-size:8px;opacity:.7">${stH?.open?`${fmtT(stH.openTime).replace(' ','')}-${fmtT(stH.closeTime).replace(' ','')}`:'-'}</span></th>`;
+    }
+    thead+=`<th style="background:${st.color}">Total Hrs</th></tr>`;
+    let tbody='';const dayTot=new Array(7).fill(0);let grand=0;
+    for(const em of emps){
+      let row=`<tr><td>${em.name}<div style="font-size:9px;color:var(--tx3)">$${parseFloat(em.wage).toFixed(2)}/hr</div></td>`;
+      let emH=0;
+      for(let d=0;d<7;d++){
+        const date=addD(_wkStart,d),ds=dKey(date),dSh=((sched[sid]||{})[d]||[]).filter(sh=>sh.empId===em.id);
+        const stH=(st.hours||[]).find(h=>h.day===d);
+        if(!dSh.length){row+=stH?.open?`<td></td>`:`<td style="background:var(--surf2)"><span style="color:var(--tx3);font-size:9px">—</span></td>`;continue;}
+        const sh=dSh[0],nh=netH(sh),rate=effRate(em.wage,sid,d,ds);
+        emH+=nh;dayTot[d]+=nh;
+        const hn=holName(ds),cls=hn?'wv-ch':rate>1?'wv-cot':'wv-cs';
+        row+=`<td><span class="${cls}">${fmtT(sh.start).replace(' ','')}-${fmtT(sh.end).replace(' ','')}${sh.lunchBreak?' L':''}</span><br><span style="font-size:9px;color:var(--tx2)">${nh.toFixed(1)}h${rate>1?` x${rate}`:''}</span></td>`;
+      }
+      grand+=emH;row+=`<td class="wv-tot">${emH>0?emH.toFixed(1):'-'}</td></tr>`;tbody+=row;
+    }
+    let totRow=`<tr><td style="font-weight:700;font-size:11px">Day Totals</td>`;
+    for(let d=0;d<7;d++)totRow+=`<td style="font-weight:700;font-size:11px;color:var(--pri)">${dayTot[d]>0?dayTot[d].toFixed(1):'-'}</td>`;
+    totRow+=`<td style="font-weight:700;color:var(--ok)">${grand.toFixed(1)}</td></tr>`;
+    html+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+      <div class="sbanner" style="background:${st.color}"><span>${st.name} — Week of ${fmtD(_wkStart)}</span><span style="font-size:11px;opacity:.9">${emps.length} staff · $${Math.round(wkTotal).toLocaleString()} payroll${wkBud?` / $${wkBud.toLocaleString()} budget`:''}</span></div>
+      <div style="overflow-x:auto"><table class="wv-table">${thead}${tbody}${totRow}</table></div></div>`;
+  }
+  el.innerHTML=html||`<div class="card"><div class="empty"><span class="mi">calendar_today</span><h3>Nothing to show</h3></div></div>`;
+}
 
-  // Track weekly hours per employee
-  const empWeeklyHours = {};
-  const empWeeklyPay = {};
-  const empDaysWorked = {};
-  state.employees.forEach(e=>{empWeeklyHours[e.id]=0;empWeeklyPay[e.id]=0;empDaysWorked[e.id]=[];});
-
-  // For each store, for each day, generate shifts
-  for(const store of state.stores) {
-    newSched[store.id] = {};
-    let storeBudgetUsed = 0;
-    const remaining = store.budget;
-
-    for(let day=0; day<7; day++) {
-      const storeHours = (store.hours||[]).find(h=>h.day===day);
-      if(!storeHours?.open) continue;
-
-      const openMin = timeToMinutes(storeHours.openTime);
-      const closeMin = timeToMinutes(storeHours.closeTime);
-      const storeLen = closeMin - openMin; // minutes store is open
-
-      // Get eligible employees for this store & day
-      const eligibleEmps = state.employees.filter(emp => {
-        if(!(emp.storeIds||[]).includes(store.id)) return false;
-        if(!(emp.availability||[]).includes(day)) return false;
-        const daysOff = emp.daysOff||2;
-        const daysCanWork = 7 - daysOff;
-        if((emp.daysWorked||empDaysWorked[emp.id]||[]).length >= daysCanWork) return false;
-        if(empWeeklyHours[emp.id] >= emp.maxWeekly) return false;
+// ══ GENERATION ENGINE (FIXED) ══
+function generateSched(){
+  if(!S.stores.length){toast('Add stores first','err');return;}
+  if(!S.employees.length){toast('Add employees first','err');return;}
+  const key=wk(_wkStart),cfg=S.settings;
+  const lt=parseFloat(cfg.lunchTrigger)||6,aloneMin=(parseInt(cfg.alone)||3)*60,intMin=(parseInt(cfg.interval)||2)*60,reduce=!!cfg.reduce;
+  const ewkH={},edW={};
+  S.employees.forEach(e=>{ewkH[e.id]=0;edW[e.id]=[];});
+  const newSched={};
+  for(const st of S.stores){
+    newSched[st.id]={};
+    const bud=(S.budgets[key]||{})[st.id]||0;
+    let budUsed=0;
+    for(let day=0;day<7;day++){
+      newSched[st.id][day]=[];
+      const stH=(st.hours||[]).find(h=>h.day===day);
+      if(!stH||!stH.open)continue;
+      const oM=t2m(stH.openTime),cM=t2m(stH.closeTime);
+      if(cM<=oM)continue;
+      const date=addD(new Date(key),day),ds=dKey(date);
+      // Build eligible list using per-day availability
+      let elig=S.employees.filter(em=>{
+        if(!(em.storeIds||[]).includes(st.id))return false;
+        const da=(em.dayAvail||{})[day];
+        if(!da||!da.on)return false;
+        if(edW[em.id].length>=(7-(em.doff||2)))return false;
+        if(ewkH[em.id]>=(em.maxWk||40))return false;
         return true;
       });
-
-      if(!eligibleEmps.length) { newSched[store.id][day]=[]; continue; }
-
-      // Sort: prefer those with fewer hours scheduled (spreading)
-      eligibleEmps.sort((a,b)=>{
-        const ah = empWeeklyHours[a.id]; const bh = empWeeklyHours[b.id];
-        if(settings.prefFulltime) {
-          const aFull = a.maxWeekly>=35; const bFull = b.maxWeekly>=35;
-          if(aFull!==bFull) return aFull?-1:1;
-        }
-        return ah-bh;
+      if(!elig.length)continue;
+      // Sort
+      elig.sort((a,b)=>{
+        if(cfg.ft){const af=(a.maxWk||40)>=35,bf=(b.maxWk||40)>=35;if(af!==bf)return af?-1:1;}
+        if(cfg.spread)return(ewkH[a.id]||0)-(ewkH[b.id]||0);
+        return 0;
       });
-
-      const shifts = [];
-      // Determine how many employees to schedule
-      // First employee: open to close (or max daily)
-      // Subsequent: staggered
-
-      let empIdx = 0;
-      let currentStart = openMin;
-
-      while(currentStart < closeMin && empIdx < eligibleEmps.length && storeBudgetUsed < remaining) {
-        const emp = eligibleEmps[empIdx];
-        const shiftStart = empIdx===0 ? openMin : openMin + staggerAlone*60 + (empIdx-1)*staggerInterval*60;
-        if(shiftStart >= closeMin) break;
-
-        // Calc max shift end based on store close & employee max daily hours
-        const maxEnd = Math.min(closeMin, shiftStart + emp.maxDaily*60);
-        const minEnd = Math.min(closeMin, shiftStart + emp.minDaily*60);
-        let shiftEnd = maxEnd;
-
-        // Check hours budget
-        let shiftMins = shiftEnd - shiftStart;
-        let shiftHours = shiftMins/60;
-        const lunchBreak = shiftHours > lunchTrigger;
-        if(lunchBreak) shiftHours -= 0.5;
-
-        // Check weekly budget
-        const shiftPay = shiftHours * parseFloat(emp.wage);
-        if(storeBudgetUsed + shiftPay > remaining * 1.02) {
-          // Try shorter shift
-          const affordableHours = (remaining - storeBudgetUsed) / parseFloat(emp.wage);
-          if(affordableHours < emp.minDaily) { empIdx++; continue; }
-          shiftHours = Math.min(affordableHours, emp.maxDaily);
-          shiftEnd = Math.min(closeMin, shiftStart + Math.round(shiftHours*60));
-          shiftMins = shiftEnd - shiftStart;
-          shiftHours = shiftMins/60;
+      if(cfg.consec)elig.sort((a,b)=>{const ay=edW[a.id].includes(day-1),by=edW[b.id].includes(day-1);return ay===by?0:ay?1:-1;});
+      const dayShifts=[];
+      for(let idx=0;idx<elig.length;idx++){
+        const em=elig[idx];
+        const da=(em.dayAvail||{})[day]||{};
+        // Respect per-day availability windows
+        let empEarliest=oM;
+        if(da.earliest)empEarliest=Math.max(oM,t2m(da.earliest));
+        let empLatest=cM;
+        if(da.latest)empLatest=Math.min(cM,t2m(da.latest));
+        // Stagger start
+        let ss;
+        if(idx===0)ss=empEarliest;
+        else if(reduce){ss=Math.max(empEarliest,oM+Math.round((cM-oM)*0.4));}
+        else{ss=Math.max(empEarliest,oM+aloneMin+(idx-1)*intMin);}
+        if(ss>=empLatest||ss>=cM)break;
+        // Compute end
+        let se=Math.min(cM,empLatest);
+        se=Math.min(se,ss+(em.maxDay||10)*60);
+        const remWk=Math.max(0,(em.maxWk||40)-ewkH[em.id]);
+        se=Math.min(se,ss+remWk*60);
+        if(bud>0){
+          const rem=bud-budUsed;if(rem<=0)break;
+          const rate=effRate(em.wage,st.id,day,ds);
+          se=Math.min(se,ss+(rem/(parseFloat(em.wage)*rate))*60);
         }
-
-        // Check employee weekly hours
-        const newTotal = empWeeklyHours[emp.id] + shiftHours;
-        if(newTotal > emp.maxWeekly) {
-          const canWork = emp.maxWeekly - empWeeklyHours[emp.id];
-          if(canWork < emp.minDaily) { empIdx++; continue; }
-          shiftEnd = Math.min(closeMin, shiftStart + Math.round(canWork*60));
-          shiftMins = shiftEnd - shiftStart;
-          shiftHours = shiftMins/60 - (shiftMins/60>lunchTrigger?0.5:0);
-        }
-
-        if(shiftEnd <= shiftStart || shiftMins < emp.minDaily*60) { empIdx++; continue; }
-
-        const finalPay = shiftHours * parseFloat(emp.wage);
-        const doLunch = (shiftMins/60) > lunchTrigger;
-
-        shifts.push({
-          empId: emp.id,
-          start: minutesToTime(shiftStart),
-          end: minutesToTime(shiftEnd),
-          lunchBreak: doLunch
-        });
-
-        storeBudgetUsed += finalPay;
-        empWeeklyHours[emp.id] += shiftMins/60 - (doLunch?0.5:0);
-        empWeeklyPay[emp.id] += finalPay;
-        empDaysWorked[emp.id].push(day);
-
-        empIdx++;
-
-        // Stop adding employees if store is covered for full hours
-        // Add one more for lunch overlap coverage
-        const coverMins = shifts.reduce((s,sh)=>{
-          return s + (timeToMinutes(sh.end)-timeToMinutes(sh.start));
-        },0);
-        if(coverMins >= storeLen * 1.5) break; // enough coverage
+        if(reduce&&idx>0)se=Math.min(se,ss+4*60);
+        se=Math.floor(se);
+        const rawH=(se-ss)/60;
+        if(rawH<(em.minDay||4))continue;
+        const doL=rawH>lt,nh=doL?rawH-.5:rawH;
+        const rate=effRate(em.wage,st.id,day,ds);
+        const pay=nh*parseFloat(em.wage)*rate;
+        dayShifts.push({empId:em.id,start:m2t(ss),end:m2t(se),lunchBreak:doL,isOT:rate>1.0});
+        budUsed+=pay;ewkH[em.id]+=nh;
+        if(!edW[em.id].includes(day))edW[em.id].push(day);
+        if(reduce&&dayShifts.length>=2)break;
       }
-
-      newSched[store.id][day] = shifts;
+      newSched[st.id][day]=dayShifts;
     }
   }
-
-  state.schedules[wk] = newSched;
-  saveData();
-  renderSchedulePage();
-  toast('Schedule generated successfully!','success');
+  S.schedules[key]=newSched;saveData();
+  let total=0;for(const sid of Object.keys(newSched))for(let d=0;d<7;d++)total+=(newSched[sid][d]||[]).length;
+  if(total===0)toast('No shifts generated — check employee availability & store hours match','warn');
+  else toast(`Schedule generated: ${total} shifts across ${S.stores.length} store(s)!`,'ok');
+  renderSched();
 }
 
-// ══════════════════════════════════════════════════════
-//  SETTINGS
-// ══════════════════════════════════════════════════════
-function saveSettings() {
-  state.settings = {
-    staggerAlone: parseInt(document.getElementById('stagger-alone').value),
-    staggerInterval: parseInt(document.getElementById('stagger-interval').value),
-    overlapBuffer: parseInt(document.getElementById('overlap-buffer').value),
-    lunchTrigger: parseFloat(document.getElementById('lunch-trigger').value),
-    prefFulltime: document.getElementById('pref-fulltime').checked,
-    prefFloat: document.getElementById('pref-float').checked,
-    prefSpread: document.getElementById('pref-spread').checked,
-    prefConsec: document.getElementById('pref-consec').checked
-  };
-  saveData();
+// ══ HOLIDAY CALENDAR ══
+function calPrevMonth(){_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderCal();}
+function calNextMonth(){_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderCal();}
+function renderCal(){
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-lbl').textContent=`${months[_calMonth]} ${_calYear}`;
+  const fh=getFedHols(_calYear),today=dKey(new Date());
+  document.getElementById('cal-head').innerHTML=DS.map(d=>`<div class="cal-dh">${d}</div>`).join('');
+  const firstDay=new Date(_calYear,_calMonth,1).getDay();
+  const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
+  const prevDays=new Date(_calYear,_calMonth,0).getDate();
+  let cells='';
+  for(let i=firstDay-1;i>=0;i--)cells+=`<div class="cal-cell other">${prevDays-i}</div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isFed=!!fh[ds],isCus=!!S.customHols[ds],isToday=ds===today;
+    const title=fh[ds]||(S.customHols[ds]?.name)||'';
+    cells+=`<div class="cal-cell ${isFed?'federal':''} ${isCus?'custom-hol':''} ${isToday?'today':''}" onclick="clickCalDay('${ds}')" title="${title}">${d}${isFed||isCus?`<div class="cal-dot"></div>`:''}</div>`;
+  }
+  const totalCells=firstDay+daysInMonth;const rem=(7-totalCells%7)%7;
+  for(let d=1;d<=rem;d++)cells+=`<div class="cal-cell other">${d}</div>`;
+  document.getElementById('cal-grid').innerHTML=cells;
+  const customs=Object.entries(S.customHols).filter(([k])=>k.startsWith(`${_calYear}-${String(_calMonth+1).padStart(2,'0')}`)).sort(([a],[b])=>a.localeCompare(b));
+  document.getElementById('custom-hol-list').innerHTML=customs.length
+    ?customs.map(([k,v])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bdr2)"><span style="color:var(--err);font-size:11px">${k.slice(5)} — ${v.name}</span><button class="ib del" style="width:22px;height:22px" onclick="removeCustomHolDirect('${k}')"><span class="mi" style="font-size:13px">close</span></button></div>`).join('')
+    :'<span style="font-size:11px">None this month</span>';
 }
-
-function loadSettingsUI() {
-  const s = state.settings;
-  const el = id => document.getElementById(id);
-  if(el('stagger-alone')) el('stagger-alone').value = s.staggerAlone||3;
-  if(el('stagger-interval')) el('stagger-interval').value = s.staggerInterval||2;
-  if(el('overlap-buffer')) el('overlap-buffer').value = s.overlapBuffer||30;
-  if(el('lunch-trigger')) el('lunch-trigger').value = s.lunchTrigger||6;
-  if(el('pref-fulltime')) el('pref-fulltime').checked = s.prefFulltime!==false;
-  if(el('pref-float')) el('pref-float').checked = s.prefFloat!==false;
-  if(el('pref-spread')) el('pref-spread').checked = s.prefSpread!==false;
-  if(el('pref-consec')) el('pref-consec').checked = s.prefConsec!==false;
+function clickCalDay(ds){
+  _holPending=ds;
+  const y=parseInt(ds.slice(0,4)),fh=getFedHols(y);
+  if(fh[ds]){toast(`${fh[ds]} — Federal holiday (auto-added, cannot remove)`,'warn');return;}
+  const isCus=!!S.customHols[ds];
+  const date=new Date(ds+'T12:00:00');
+  document.getElementById('hol-date-lbl').textContent=date.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('hol-name-inp').value=isCus?S.customHols[ds].name:'';
+  document.getElementById('hol-remove-btn').style.display=isCus?'':'none';
+  openDlg('dlg-hol');
 }
-
-// ══════════════════════════════════════════════════════
-//  PRINT / EXPORT SCHEDULE
-// ══════════════════════════════════════════════════════
-function exportSchedulePDF() {
-  window.print();
+function saveCustomHol(){
+  const name=document.getElementById('hol-name-inp').value.trim()||'Custom Holiday';
+  S.customHols[_holPending]={name,isOT:true};
+  saveData();closeDlg('dlg-hol');renderCal();toast(`${name} saved`,'ok');
 }
+function removeCustomHol(){delete S.customHols[_holPending];saveData();closeDlg('dlg-hol');renderCal();toast('Holiday removed');}
+function removeCustomHolDirect(ds){delete S.customHols[ds];saveData();renderCal();toast('Holiday removed');}
 
-// ══════════════════════════════════════════════════════
-//  PERSISTENCE
-// ══════════════════════════════════════════════════════
-function saveData() {
-  try { localStorage.setItem('schedy_v1', JSON.stringify(state)); } catch(e){}
-}
-
-function loadData() {
-  try {
-    const raw = localStorage.getItem('schedy_v1');
-    if(raw) { const d=JSON.parse(raw); Object.assign(state,d); }
-  } catch(e){}
-}
-
-function exportData() {
-  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=`schedy-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(url);
-  toast('Data exported!','success');
-}
-
-function importData(event) {
-  const file = event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const d = JSON.parse(e.target.result);
-      Object.assign(state,d);
-      saveData(); loadSettingsUI();
-      showPage('dashboard');
-      toast('Data imported successfully!','success');
-    } catch {
-      toast('Invalid JSON file','error');
+// ══ XLSX EXPORT ══
+function exportXLSX(){
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','err');return;}
+  const key=wk(_wkStart),sched=S.schedules[key]||{},wb=XLSX.utils.book_new();
+  const sids=_stTab==='all'?S.stores.map(s=>s.id):[_stTab];
+  for(const sid of sids){
+    const st=S.stores.find(s=>s.id===sid);if(!st)continue;
+    const empSet=new Set();
+    for(let d=0;d<7;d++)((sched[sid]||{})[d]||[]).forEach(sh=>empSet.add(sh.empId));
+    S.employees.filter(e=>(e.storeIds||[]).includes(sid)).forEach(e=>empSet.add(e.id));
+    const emps=[...empSet].map(id=>S.employees.find(e=>e.id===id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const wsData=[];
+    const r0=[''];for(let i=0;i<7;i++){const d=addD(_wkStart,i);r0.push(`${d.getMonth()+1}/${d.getDate()}`)}r0.push('');wsData.push(r0);
+    wsData.push([st.name,...DAYS,'']);
+    const r2=['Staff'];
+    for(let i=0;i<7;i++){const h=(st.hours||[]).find(hh=>hh.day===i),d=addD(_wkStart,i),ds=dKey(d),hn=holName(ds),isSun=i===0&&st.sundayOT;let lbl=h?.open?`${fmtT(h.openTime).replace(' ','')}-${fmtT(h.closeTime).replace(' ','')}`:'-';if(hn)lbl+=' *';if(isSun)lbl+=' S';r2.push(lbl);}
+    r2.push('Total Hours');wsData.push(r2);
+    for(const em of emps){
+      const row=[em.name];let wkTot=0;
+      for(let d=0;d<7;d++){
+        const dSh=((sched[sid]||{})[d]||[]).filter(sh=>sh.empId===em.id);
+        if(!dSh.length){row.push('');continue;}
+        const sh=dSh[0],nh=netH(sh);wkTot+=nh;
+        const ds=dKey(addD(_wkStart,d)),rate=effRate(em.wage,sid,d,ds);
+        row.push(`${fmtT(sh.start).replace(' ','')}-${fmtT(sh.end).replace(' ','')}${sh.lunchBreak?' (L)':''}${rate>1?` x${rate}`:''}`);
+      }
+      row.push(wkTot>0?parseFloat(wkTot.toFixed(2)):'');wsData.push(row);
     }
-  };
-  reader.readAsText(file);
-  event.target.value='';
+    wsData.push(['','','','','','','','','']);
+    const bud=(S.budgets[key]||{})[sid]||0,totPay=wkPay(key,sid);
+    wsData.push(['Budget','','','','','','',`$${bud.toLocaleString()}`,'']);
+    wsData.push(['Payroll Used','','','','','','',`$${totPay.toFixed(2)}`,'']);
+    const ws=XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols']=[{wch:20},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:11}];
+    ws['!rows']=[{hpt:15},{hpt:19},{hpt:17}];
+    const range=XLSX.utils.decode_range(ws['!ref']);
+    for(let R=range.s.r;R<=range.e.r;R++)for(let C=range.s.c;C<=range.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});if(!ws[addr])ws[addr]={v:'',t:'s'};
+      ws[addr].s=xStyle(R,C,wsData[R]?.[C]);
+    }
+    XLSX.utils.book_append_sheet(wb,ws,st.name.slice(0,31));
+  }
+  const ds=`${_wkStart.getMonth()+1}-${_wkStart.getDate()}-${_wkStart.getFullYear()}`;
+  XLSX.writeFile(wb,`schedy-${ds}.xlsx`);toast('Exported to Excel!','ok');
+}
+function xStyle(R,C,val){
+  const b={top:{style:'thin',color:{rgb:'999999'}},bottom:{style:'thin',color:{rgb:'999999'}},left:{style:'thin',color:{rgb:'999999'}},right:{style:'thin',color:{rgb:'999999'}}};
+  const base={font:{name:'Calibri',sz:10},alignment:{horizontal:'center',vertical:'center'},border:b};
+  if(R===0)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
+  if(R===1)return{...base,font:{name:'Calibri',sz:11,bold:true,color:{rgb:C===0?'22A850':'1E2A3A'}},fill:{fgColor:{rgb:'FFD966'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
+  if(R===2)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'1E2A3A'}},fill:{fgColor:{rgb:'FFD966'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
+  if(C===8)return{...base,font:{name:'Calibri',sz:10,bold:true},fill:{fgColor:{rgb:'DDEEFF'},patternType:'solid'}};
+  if(C===0)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'E0E0E0'}},fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},alignment:{horizontal:'right',vertical:'center'}};
+  if(val&&typeof val==='string'&&(val.includes('AM')||val.includes('PM')))return{...base,font:{name:'Calibri',sz:9,color:{rgb:'1E2A3A'}},fill:{fgColor:{rgb:'C8E6FF'},patternType:'solid'}};
+  return{...base,fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},font:{name:'Calibri',sz:10,color:{rgb:'555555'}}};
 }
 
-// ══════════════════════════════════════════════════════
-//  DIALOG HELPERS
-// ══════════════════════════════════════════════════════
-function closeDialog(id) {
-  document.getElementById(id).classList.remove('open');
+// ══ SETTINGS ══
+function saveSettings(){
+  S.settings={alone:parseInt(document.getElementById('s-alone')?.value)||3,interval:parseInt(document.getElementById('s-interval')?.value)||2,lunchTrigger:parseFloat(document.getElementById('s-lunch')?.value)||6,reduce:document.getElementById('s-reduce')?.checked||false,ft:document.getElementById('s-ft')?.checked!==false,spread:document.getElementById('s-spread')?.checked!==false,consec:document.getElementById('s-consec')?.checked!==false,holRate:parseFloat(document.getElementById('s-hol-rate')?.value)||1.5,otHrs:parseInt(document.getElementById('s-ot-hrs')?.value)||40,otRate:parseFloat(document.getElementById('s-ot-rate')?.value)||1.5};
+  saveData();
 }
-// Close on backdrop click
-document.querySelectorAll('.dialog-backdrop').forEach(bd=>{
-  bd.addEventListener('click', e=>{if(e.target===bd)bd.classList.remove('open');});
-});
-
-// ══════════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════════
-function toast(msg, type='') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="material-icons-round" style="font-size:16px">${type==='success'?'check_circle':type==='error'?'error':'info'}</span>${msg}`;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(()=>el.remove(),3000);
+function loadSettUI(){
+  const s=S.settings,g=id=>document.getElementById(id);
+  if(!g('s-alone'))return;
+  g('s-alone').value=s.alone||3;g('s-interval').value=s.interval||2;g('s-lunch').value=s.lunchTrigger||6;
+  g('s-reduce').checked=s.reduce||false;g('s-ft').checked=s.ft!==false;g('s-spread').checked=s.spread!==false;g('s-consec').checked=s.consec!==false;
+  g('s-hol-rate').value=s.holRate||1.5;g('s-ot-hrs').value=s.otHrs||40;g('s-ot-rate').value=s.otRate||1.5;
 }
 
-// ══════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════
-loadData();
-loadSettingsUI();
-renderDashboard();
-
-// Set today's day tab
-currentDayTab = new Date().getDay();
-</script>
-<script>
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js")
-      .then(r=>console.log("SW registered",r.scope))
-      .catch(e=>console.log("SW error",e));
-  });
+// ══ DATA ══
+function saveData(){try{localStorage.setItem('schedy_v4',JSON.stringify(S));}catch(e){}}
+function loadData(){
+  try{
+    const raw=localStorage.getItem('schedy_v4');
+    if(raw){const d=JSON.parse(raw);if(d.stores)S.stores=d.stores;if(d.employees)S.employees=d.employees;if(d.schedules)S.schedules=d.schedules;if(d.budgets)S.budgets=d.budgets;if(d.customHols)S.customHols=d.customHols;if(d.settings)S.settings=Object.assign({},S.settings,d.settings);if(d.theme)S.theme=d.theme;}
+    if(!S.budgets)S.budgets={};if(!S.customHols)S.customHols={};
+  }catch(e){}
 }
+function exportJSON(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`schedy-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(u);toast('Exported!','ok');}
+function importJSON(evt){
+  const f=evt.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.stores)S.stores=d.stores;if(d.employees)S.employees=d.employees;if(d.schedules)S.schedules=d.schedules;if(d.budgets)S.budgets=d.budgets;if(d.customHols)S.customHols=d.customHols;if(d.settings)S.settings=Object.assign({},S.settings,d.settings);if(d.theme)S.theme=d.theme;saveData();loadSettUI();applyTheme(S.theme||'material-light');nav('dashboard');toast('Imported!','ok');}catch{toast('Invalid JSON','err');}};
+  r.readAsText(f);evt.target.value='';
+}
+
+// ══ BOOT ══
+loadData();applyTheme(S.theme||'material-light');loadSettUI();renderDash();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
 </script>
 </body>
 </html>
