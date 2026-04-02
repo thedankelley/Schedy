@@ -493,7 +493,7 @@ function openStoreDlg(id=null){
     </div></div>`).join('');
   openDlg('dlg-store');
 }
-function togDay(i){const cb=document.getElementById(`do-${i}`);cb.checked=!cb.checked;cb.closest('.chip-cb').classList.toggle('on',cb.checked);document.getElementById(`dot-${i}`).disabled=!cb.checked;document.getElementById(`dct-${i}`).disabled=!cb.checked;}
+function togDay(i){const cb=document.getElementById(`do-${i}`);cb.closest('.chip-cb').classList.toggle('on',cb.checked);document.getElementById(`dot-${i}`).disabled=!cb.checked;document.getElementById(`dct-${i}`).disabled=!cb.checked;}
 function pickClr(c){_clr=c;document.querySelectorAll('#st-swatches .swd').forEach(d=>d.classList.toggle('on',d.style.background===c));}
 function saveStore(){
   const name=document.getElementById('st-name').value.trim();
