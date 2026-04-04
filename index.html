@@ -130,6 +130,20 @@ hr.dv{border:none;border-top:1px solid var(--bdr2);margin:12px 0}
 @media print{.top-bar,.nav-rail,.wbar,.dtabs,.stabs,.pg-acts,.btn{display:none!important}.main{padding:0}.card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid}}
 .mi{font-family:'Material Icons Round';font-weight:normal;font-style:normal;font-size:20px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;vertical-align:middle}
 
+
+/* Date-range hours */
+.hrs-override-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr2);flex-wrap:wrap}
+.hrs-override-tag{background:var(--pri-bg);color:var(--pri);border-radius:var(--rp);padding:2px 9px;font-size:10px;font-family:var(--ff);font-weight:600;white-space:nowrap}
+/* Empty cell add button */
+.empty-cell-add{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;cursor:pointer;background:transparent;border:none}
+.sr:hover .empty-cell-add,.stl:hover .empty-cell-add{opacity:1}
+.empty-cell-add-inner{background:color-mix(in srgb,var(--pri) 15%,transparent);border:1px dashed var(--pri);border-radius:4px;width:80px;height:28px;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;font-family:var(--ff);color:var(--pri);font-weight:500}
+.empty-cell-add-inner .mi{font-size:13px}
+/* Pay visibility */
+[data-hide-pay="1"] .es{visibility:hidden}
+[data-hide-pay="1"] .wv-pay{visibility:hidden}
+/* Export opts dialog */
+.exp-preview{background:var(--surf2);border-radius:var(--r2);padding:10px;margin-top:10px;font-size:11px;color:var(--tx2)}
 </style>
 </head>
 <body>
@@ -185,9 +199,9 @@ hr.dv{border:none;border-top:1px solid var(--bdr2);margin:12px 0}
     <div class="pg-acts">
       <button class="btn btn-pri" onclick="generateSched()"><span class="mi">auto_awesome</span>Generate</button>
       <button class="btn btn-ton" onclick="openBudgetDlg()"><span class="mi">payments</span>Budgets</button>
-      <button class="btn btn-out btn-sm" onclick="exportXLSX()"><span class="mi">table_chart</span>XLSX</button>
-      <button class="btn btn-out btn-sm" onclick="exportPNG()"><span class="mi">image</span>PNG</button>
-      <button class="btn btn-out btn-sm" onclick="exportPDF()"><span class="mi">picture_as_pdf</span>PDF</button>
+      <button class="btn btn-out btn-sm" onclick="openExportOptsDlg('xlsx')"><span class="mi">table_chart</span>XLSX</button>
+      <button class="btn btn-out btn-sm" onclick="openExportOptsDlg('png')"><span class="mi">image</span>PNG</button>
+      <button class="btn btn-out btn-sm" onclick="openExportOptsDlg('pdf')"><span class="mi">picture_as_pdf</span>PDF</button>
       <button class="btn btn-out btn-sm" onclick="window.print()"><span class="mi">print</span>Print</button>
     </div>
   </div>
@@ -290,6 +304,13 @@ hr.dv{border:none;border-top:1px solid var(--bdr2);margin:12px 0}
     <div class="fg"><label class="flabel">Sunday OT Rate (1.0=regular)</label><input class="finput" type="number" id="st-sun-rate" step="0.05" min="1" max="3" value="1.5"></div>
     <div class="fg"><label class="flabel">Holiday Rate Override (blank=global)</label><input class="finput" type="number" id="st-hol-rate" step="0.05" min="1" max="3" placeholder="e.g. 1.5"></div>
   </div>
+  <hr class="dv">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+    <div style="font-family:var(--ff);font-size:13px;font-weight:600">Date Range Hours Overrides</div>
+    <button class="btn btn-ton btn-sm" onclick="openHrsRangeDlg()"><span class="mi">add</span>Add Range</button>
+  </div>
+  <div class="ibox"><span class="mi">info</span>Override weekly hours for specific calendar date ranges. Example: different summer hours June 7–Aug 31.</div>
+  <div id="st-hrs-overrides"></div>
   <div class="dlg-acts"><button class="btn btn-out" onclick="closeDlg('dlg-store')">Cancel</button><button class="btn btn-pri" onclick="saveStore()"><span class="mi">save</span>Save Store</button></div>
 </div></div>
 
@@ -373,6 +394,41 @@ hr.dv{border:none;border-top:1px solid var(--bdr2);margin:12px 0}
   </div>
 </div></div>
 
+
+
+<!-- EXPORT OPTIONS DIALOG -->
+<div class="dlg-bd" id="dlg-export-opts"><div class="dlg">
+  <div class="dlg-title"><span class="mi">tune</span>Export Options — <span id="exp-type-label">XLSX</span></div>
+  <div class="trow">
+    <div class="tlab">Hide Individual Pay Rates<small>Removes wages and pay totals — good for sharing with staff</small></div>
+    <label class="toggle"><input type="checkbox" id="exp-hide-pay"><span class="ttrack"></span></label>
+  </div>
+  <div class="exp-preview" id="exp-preview-text">All hours, shifts, and pay totals will be included.</div>
+  <div class="dlg-acts">
+    <button class="btn btn-out" onclick="closeDlg('dlg-export-opts')">Cancel</button>
+    <button class="btn btn-pri" onclick="doExport()"><span class="mi">download</span>Export</button>
+  </div>
+</div></div>
+
+<!-- DATE RANGE HOURS DIALOG -->
+<div class="dlg-bd" id="dlg-hrs-range"><div class="dlg wide">
+  <div class="dlg-title"><span class="mi">date_range</span>Add Date Range Hours Override</div>
+  <div class="ibox"><span class="mi">info</span>Set specific hours for a calendar date range. These override the weekly defaults for matching dates.</div>
+  <div class="fgrid">
+    <div class="fg"><label class="flabel">From Date *</label><input class="finput" type="date" id="hrng-from"></div>
+    <div class="fg"><label class="flabel">To Date *</label><input class="finput" type="date" id="hrng-to"></div>
+    <div class="fg"><label class="flabel">Open</label>
+      <div class="trow" style="padding:4px 0"><span style="font-size:12px">Store is open these days</span><label class="toggle"><input type="checkbox" id="hrng-open" checked><span class="ttrack"></span></label></div>
+    </div>
+    <div class="fg"><label class="flabel">Open Time</label><input class="finput" type="time" id="hrng-ot" value="10:00"></div>
+    <div class="fg"><label class="flabel">Close Time</label><input class="finput" type="time" id="hrng-ct" value="18:00"></div>
+    <div class="fg"><label class="flabel">Notes (optional)</label><input class="finput" type="text" id="hrng-note" placeholder="e.g. Summer hours"></div>
+  </div>
+  <div class="dlg-acts">
+    <button class="btn btn-out" onclick="closeDlg('dlg-hrs-range')">Cancel</button>
+    <button class="btn btn-pri" onclick="saveHrsRange()"><span class="mi">save</span>Save Range</button>
+  </div>
+</div></div>
 
 <div class="toast-wrap" id="tw"></div>
 <script>
@@ -536,6 +592,9 @@ function openStoreDlg(id=null){
   document.getElementById('st-swatches').innerHTML=COLORS.map(c=>`<div class="swd ${c===_clr?'on':''}" style="background:${c}" onclick="pickClr('${c}')"></div>`).join('');
   const ex=st?.hours||DAYS.map((_,i)=>({day:i,open:false,openTime:'10:00',closeTime:'18:00'}));
   document.getElementById('st-hrs').innerHTML=ex.map((h,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr2)"><label class="chip-cb ${h.open?'on':''}" style="min-width:68px;justify-content:center"><input type="checkbox" id="do-${i}" ${h.open?'checked':''} onchange="togDay(${i})">${DAYS[i].slice(0,3)}</label><div style="display:flex;gap:7px;flex:1"><div class="fg" style="flex:1"><label class="flabel">Open</label><input class="finput" type="time" id="dot-${i}" value="${h.openTime}" ${h.open?'':'disabled'}></div><div class="fg" style="flex:1"><label class="flabel">Close</label><input class="finput" type="time" id="dct-${i}" value="${h.closeTime}" ${h.open?'':'disabled'}></div></div></div>`).join('');
+  window._tmpHrsOverrides=null;
+  const overrides=st?.hoursOverrides||[];
+  renderStoreHrsOverrides(overrides);
   openDlg('dlg-store');
 }
 function togDay(i){const cb=document.getElementById(`do-${i}`);cb.closest('.chip-cb').classList.toggle('on',cb.checked);document.getElementById(`dot-${i}`).disabled=!cb.checked;document.getElementById(`dct-${i}`).disabled=!cb.checked;}
@@ -544,7 +603,8 @@ function saveStore(){
   const name=document.getElementById('st-name').value.trim();
   if(!name){toast('Store name required','err');return;}
   const hrs=DAYS.map((_,i)=>({day:i,open:document.getElementById(`do-${i}`)?.checked||false,openTime:document.getElementById(`dot-${i}`)?.value||'10:00',closeTime:document.getElementById(`dct-${i}`)?.value||'18:00'}));
-  const data={name,color:_clr,hours:hrs,sundayOT:document.getElementById('st-sun-ot').checked,sundayOTRate:parseFloat(document.getElementById('st-sun-rate').value)||1.5,holRateOverride:parseFloat(document.getElementById('st-hol-rate').value)||0};
+  const existingOverrides=_stId?S.stores.find(s=>s.id===_stId)?.hoursOverrides||[]:window._tmpHrsOverrides||[];
+  const data={name,color:_clr,hours:hrs,hoursOverrides:existingOverrides,sundayOT:document.getElementById('st-sun-ot').checked,sundayOTRate:parseFloat(document.getElementById('st-sun-rate').value)||1.5,holRateOverride:parseFloat(document.getElementById('st-hol-rate').value)||0};
   if(_stId)Object.assign(S.stores.find(s=>s.id===_stId),data);else S.stores.push({id:uid(),...data});
   saveData();closeDlg('dlg-store');renderStores();toast(_stId?'Store updated':'Store added','ok');
 }
@@ -637,6 +697,24 @@ function openShiftEdit(storeId,day,shiftIdx){
   document.getElementById('shift-lunch').checked=sh?.lunchBreak||false;
   document.getElementById('shift-emp-info').textContent=`${st?.name||''} — ${DAYS[day]}, ${fmtD(addD(_wkStart,day))}`;
   document.getElementById('shift-delete-btn').style.display=sh?'':'none';
+  updateShiftPayPreview();
+  openDlg('dlg-shift');
+}
+function openAddShiftForStore(storeId, day){
+  const key=wk(_wkStart);
+  const existing=(S.schedules[key]||{})[storeId]||{};
+  const newIdx=((existing[day])||[]).length;
+  _shiftCtx={storeId,day,shiftIdx:newIdx,isNew:true};
+  const st=S.stores.find(s=>s.id===storeId);
+  const allEmps=S.employees.filter(e=>(e.storeIds||[]).includes(storeId));
+  document.getElementById('shift-emp-sel').innerHTML=sortEmps(allEmps).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  const ds=dKey(addD(_wkStart,day));
+  const stH=getStoreHoursForDate(st,day,ds);
+  document.getElementById('shift-start').value=stH?.openTime||'10:00';
+  document.getElementById('shift-end').value=stH?.closeTime||'18:00';
+  document.getElementById('shift-lunch').checked=false;
+  document.getElementById('shift-emp-info').textContent=`${st?.name||''} — ${DAYS[day]}, ${fmtD(addD(_wkStart,day))} (New Shift)`;
+  document.getElementById('shift-delete-btn').style.display='none';
   updateShiftPayPreview();
   openDlg('dlg-shift');
 }
@@ -778,7 +856,7 @@ function renderDayView(){
       ${flagHtml}
       ${sortedShifts.length
         ?`<div class="sg-wrap"><div class="sg"><div class="sg-head"><div class="sg-ec">Employee</div><div class="sg-th">${hlbls.map(m=>`<div class="htick">${fmtT(m2t(m))}</div>`).join('')}</div></div>${rows}</div></div>`
-        :`<div style="padding:24px;text-align:center;color:var(--tx2)"><span class="mi" style="font-size:32px;display:block;opacity:.3;margin-bottom:6px">event_busy</span>No shifts — click Generate or Add Shift</div>`}
+        :`<div style="position:relative;min-height:60px;cursor:pointer" onclick="openAddShiftForStore('${sid}',${_dayTab})"><div style="padding:20px;text-align:center;color:var(--tx2)"><span class="mi" style="font-size:28px;display:block;opacity:.3;margin-bottom:4px">event_busy</span><span style="font-size:11px">No shifts — click here or Generate</span></div></div>`}
     </div>`;
   }
   if(!anyGen&&S.employees.length&&html.includes('sbanner'))
@@ -829,298 +907,410 @@ function renderWeekView(){
   el.innerHTML=html||`<div class="card"><div class="empty"><span class="mi">calendar_today</span><h3>Nothing to show</h3></div></div>`;
 }
 
-/* ── SCHEDULE GENERATION ENGINE ── */
+/* ══════════════════════════════════════════════════════════════
+   SCHEDULE GENERATION ENGINE v2
+   - Absolute minimum/maximum weekly hours respected
+   - Distributes hours across days properly  
+   - Flags payroll overruns caused by minimums
+   - Regenerates existing week cleanly
+   - No more than 6 consecutive days
+══════════════════════════════════════════════════════════════ */
 function generateSched(){
   if(!S.stores.length){toast('Add stores first','err');return;}
   if(!S.employees.length){toast('Add employees first','err');return;}
+
   const key=wk(_wkStart),cfg=S.settings;
   const lt=parseFloat(cfg.lunchTrigger)||6;
   const aloneMin=(parseInt(cfg.alone)||3)*60;
   const intMin=(parseInt(cfg.interval)||2)*60;
   const reduce=!!cfg.reduce;
-
-  // Look at prev week and next week for consecutive-day-off calculation
   const prevKey=wk(addD(_wkStart,-7));
-  const nextKey=wk(addD(_wkStart,7));
 
-  // Per-employee weekly tracking
-  const ewkH={},edW={};
-  S.employees.forEach(e=>{ewkH[e.id]=0;edW[e.id]=[];});
+  // ── PHASE 1: Build per-employee cross-store tracking ──
+  // ewkH[empId] = net hours scheduled this week (across ALL stores)
+  // edW[empId]  = array of day indices worked this week (across ALL stores)
+  const ewkH={}, edW={};
+  S.employees.forEach(e=>{ ewkH[e.id]=0; edW[e.id]=[]; });
 
   const newSched={};
-  const allFlags={}; // storeId -> [{day, reason}]
+  const allFlags={}; // {storeId: [{day, reason, severity}]}
+  const budgetOverruns=[]; // flags when min-hours force budget overrun
 
+  // Build a flat schedule object (all stores share same ewkH/edW)
+  // We process days in order 0-6, across all stores each day
+  // This gives fair cross-store distribution
+
+  // Initialize empty schedule
   for(const st of S.stores){
     newSched[st.id]={};
     allFlags[st.id]=[];
-    const bud=(S.budgets[key]||{})[st.id]||0;
-    let budUsed=0;
+    for(let d=0;d<7;d++) newSched[st.id][d]=[];
+  }
 
-    for(let day=0;day<7;day++){
-      newSched[st.id][day]=[];
+  // ── PHASE 2: First pass — schedule optimal shifts ──
+  // Process day by day so ewkH spreads fairly
+  for(let day=0;day<7;day++){
+    for(const st of S.stores){
       const date=addD(new Date(key),day);
       const ds=dKey(date);
 
-      // Store closed by holiday config?
       if(isStoreClosed(ds)){
-        allFlags[st.id].push({day,reason:`Store marked closed (${holName(ds)||'custom closure'})`});
+        allFlags[st.id].push({day,reason:`Store closed — ${holName(ds)||'custom closure'}`,sev:'info'});
         continue;
       }
 
-      const stH=(st.hours||[]).find(h=>h.day===day);
-      if(!stH||!stH.open)continue;
+      const stH=getStoreHoursForDate(st,day,ds);
+      if(!stH||!stH.open) continue;
       const oM=t2m(stH.openTime),cM=t2m(stH.closeTime);
-      if(cM<=oM)continue;
+      if(cM<=oM) continue;
 
-      // Build eligible employees
+      // Eligible employees for this store+day
       let elig=S.employees.filter(em=>{
-        if(!(em.storeIds||[]).includes(st.id))return false;
+        if(!(em.storeIds||[]).includes(st.id)) return false;
         const da=(em.dayAvail||{})[day];
-        if(!da||!da.on)return false;
-        // Check PTO
-        if((em.ptoDates||[]).includes(ds))return false;
-        // Days off budget
-        if(edW[em.id].length>=(7-(em.doff||2)))return false;
-        // Weekly max hours
-        if(ewkH[em.id]>=(em.maxWk||40))return false;
-        // No more than 6 consecutive days (check prev week's last days)
-        const consecutive=getConsecutiveDays(em.id,day,key,prevKey);
-        if(consecutive>=6)return false;
+        if(!da||!da.on) return false;
+        if((em.ptoDates||[]).includes(ds)) return false;
+        if(edW[em.id].length>=(7-(em.doff||2))) return false;
+        if(ewkH[em.id]>=(em.maxWk||40)) return false;
+        const cons=getConsecutiveDays(em.id,day,key,prevKey,newSched);
+        if(cons>=6) return false;
         return true;
       });
 
-      // Sort: managers first, then full-time, then by hours spread
+      // Sort: role order first, then full-time, then spread hours evenly
       elig.sort((a,b)=>{
-        const ra=ROLE_ORDER[a.role||'associate']??3,rb=ROLE_ORDER[b.role||'associate']??3;
-        if(ra!==rb)return ra-rb;
-        if(cfg.ft){const af=(a.maxWk||40)>=35,bf=(b.maxWk||40)>=35;if(af!==bf)return af?-1:1;}
-        if(cfg.spread)return(ewkH[a.id]||0)-(ewkH[b.id]||0);
-        return 0;
+        const ra=ROLE_ORDER[a.role||'associate']??3, rb=ROLE_ORDER[b.role||'associate']??3;
+        if(ra!==rb) return ra-rb;
+        if(cfg.ft){ const af=(a.maxWk||40)>=35,bf=(b.maxWk||40)>=35; if(af!==bf) return af?-1:1; }
+        return (ewkH[a.id]||0)-(ewkH[b.id]||0);
       });
-      if(cfg.consec){elig.sort((a,b)=>{const ay=edW[a.id].includes(day-1),by=edW[b.id].includes(day-1);return ay===by?0:ay?1:-1;});}
+      if(cfg.consec){
+        elig.sort((a,b)=>{
+          const ay=edW[a.id].includes(day-1), by=edW[b.id].includes(day-1);
+          return ay===by?0:ay?1:-1;
+        });
+      }
 
       const dayShifts=[];
       let staffed=false;
+      const bud=(S.budgets[key]||{})[st.id]||0;
+      // Calculate how much budget has been used for THIS store so far this week
+      let stBudUsed=0;
+      for(let d2=0;d2<day;d2++){
+        for(const sh of newSched[st.id][d2]||[]){
+          const em=S.employees.find(e=>e.id===sh.empId);
+          if(em){const ds2=dKey(addD(new Date(key),d2));stBudUsed+=shPay(sh,em.wage,st.id,d2,ds2);}
+        }
+      }
 
       for(let idx=0;idx<elig.length;idx++){
         const em=elig[idx];
         const da=(em.dayAvail||{})[day]||{};
 
-        // Per-day availability window
         let empEarliest=oM;
-        if(da.earliest)empEarliest=Math.max(oM,t2m(da.earliest));
+        if(da.earliest) empEarliest=Math.max(oM,t2m(da.earliest));
         let empLatest=cM;
-        if(da.latest)empLatest=Math.min(cM,t2m(da.latest));
+        if(da.latest) empLatest=Math.min(cM,t2m(da.latest));
 
-        // Stagger
+        // Stagger arrival
         let ss;
-        if(idx===0)ss=empEarliest;
-        else if(reduce)ss=Math.max(empEarliest,oM+Math.round((cM-oM)*0.4));
-        else ss=Math.max(empEarliest,oM+aloneMin+(idx-1)*intMin);
+        if(idx===0) ss=empEarliest;
+        else if(reduce) ss=Math.max(empEarliest, oM+Math.round((cM-oM)*0.4));
+        else ss=Math.max(empEarliest, oM+aloneMin+(idx-1)*intMin);
 
-        if(ss>=empLatest||ss>=cM)break;
+        if(ss>=empLatest||ss>=cM) { if(!staffed) continue; else break; }
 
-        // Compute end time — must respect minDay as well
-        let se=Math.min(cM,empLatest);
-        se=Math.min(se,ss+(em.maxDay||10)*60);
+        // Compute ideal shift end
+        let se=Math.min(cM, empLatest);
+        // Respect max daily
+        se=Math.min(se, ss+(em.maxDay||10)*60);
+        // Respect max weekly remaining
+        const remWkH=Math.max(0,(em.maxWk||40)-ewkH[em.id]);
+        se=Math.min(se, ss+remWkH*60);
+        // Reduce overlap cap
+        if(reduce&&idx>0) se=Math.min(se, ss+4*60);
 
-        // Remaining weekly hours for this employee
-        const remWk=Math.max(0,(em.maxWk||40)-ewkH[em.id]);
-        se=Math.min(se,ss+remWk*60);
-
-        // Budget constraint
-        if(bud>0){
-          const rem=bud-budUsed;
-          // If no budget left but no one scheduled yet, still schedule (must staff)
-          if(rem<=0&&staffed)break;
-          if(rem>0){
-            const rate=effRate(em.wage,st.id,day,ds);
-            se=Math.min(se,ss+(rem/(parseFloat(em.wage)*rate))*60);
-          }
+        // Budget constraint — but DON'T apply it if this is the only person for the store (must staff)
+        if(bud>0&&staffed){
+          const remBud=Math.max(0,bud-stBudUsed);
+          const rate=effRate(em.wage,st.id,day,ds);
+          const maxHrs=remBud/(parseFloat(em.wage)*rate);
+          se=Math.min(se, ss+maxHrs*60);
         }
 
-        if(reduce&&idx>0)se=Math.min(se,ss+4*60);
         se=Math.floor(se);
+        let rawH=(se-ss)/60;
 
-        const rawH=(se-ss)/60;
-        // Must meet minimum daily hours; if first employee (must staff), skip min-day check
-        if(!staffed){
-          // First person: shift to at minimum minDay hours if possible
-          if(rawH<(em.minDay||4)){
-            const neededEnd=ss+(em.minDay||4)*60;
-            if(neededEnd<=cM&&neededEnd<=empLatest){
-              se=Math.floor(Math.min(neededEnd,cM,empLatest));
-            } else {
-              // Can't meet minDay — try next employee
-              continue;
-            }
+        // Enforce minimum daily hours
+        if(rawH<(em.minDay||4)){
+          // Try to extend to minDay
+          const needed=ss+(em.minDay||4)*60;
+          if(needed<=empLatest&&needed<=cM&&(em.minDay||4)<=remWkH){
+            se=Math.floor(Math.min(needed,cM,empLatest));
+            rawH=(se-ss)/60;
+          } else {
+            // Can't meet minDay for this employee, skip them
+            continue;
           }
-        } else {
-          if(rawH<(em.minDay||4))continue;
         }
 
-        const finalRawH=(se-ss)/60;
-        if(finalRawH<=0)continue;
+        if(rawH<=0) continue;
 
-        const doL=finalRawH>lt;
-        const nh=doL?finalRawH-.5:finalRawH;
+        const doL=rawH>lt;
+        const nh=doL?rawH-.5:rawH;
         const rate=effRate(em.wage,st.id,day,ds);
         const pay=nh*parseFloat(em.wage)*rate;
 
         dayShifts.push({empId:em.id,start:m2t(ss),end:m2t(se),lunchBreak:doL,isOT:rate>1.0});
-        budUsed+=pay;
+        stBudUsed+=pay;
         ewkH[em.id]+=nh;
-        if(!edW[em.id].includes(day))edW[em.id].push(day);
+        if(!edW[em.id].includes(day)) edW[em.id].push(day);
         staffed=true;
 
-        if(reduce&&dayShifts.length>=2)break;
+        if(reduce&&dayShifts.length>=2) break;
       }
 
       newSched[st.id][day]=dayShifts;
 
-      // Flag if store is open but not staffed
-      if(!staffed&&stH?.open&&!isStoreClosed(ds)){
-        const reason=elig.length===0
-          ?(()=>{
-            const potentials=S.employees.filter(e=>(e.storeIds||[]).includes(st.id));
-            if(!potentials.length)return'No employees assigned to this store.';
-            const ptoBlocked=potentials.filter(e=>(e.ptoDates||[]).includes(ds));
-            if(ptoBlocked.length===potentials.length)return'All assigned employees have PTO this day.';
-            const notAvail=potentials.filter(e=>!(e.dayAvail||{})[day]?.on);
-            if(notAvail.length===potentials.length)return'No employees have availability set for this day.';
-            return'All assigned employees have hit their weekly hour/day limits.';
-          })()
-          :'All available employees were excluded due to hour limits or constraints.';
-        allFlags[st.id].push({day,reason});
-      }
-    }
-    // Attach flags
-    newSched[st.id]._flags=allFlags[st.id];
-
-    // Second pass: push employees toward their minimum weekly hours
-    // Try to extend shifts or add days if employees are under minWk
-    for(const em of S.employees.filter(e=>(e.storeIds||[]).includes(st.id))){
-      if(ewkH[em.id]>=(em.minWk||20))continue;
-      // Try adding hours on days already worked
-      for(let day=0;day<7&&ewkH[em.id]<em.minWk;day++){
-        const shift=newSched[st.id][day]?.find(sh=>sh.empId===em.id);
-        if(!shift)continue;
-        const stH=(st.hours||[]).find(h=>h.day===day);
-        if(!stH?.open)continue;
-        const cM=t2m(stH.closeTime);
-        const curEnd=t2m(shift.end);
-        const da=(em.dayAvail||{})[day]||{};
-        let empLatest=cM;if(da.latest)empLatest=Math.min(cM,t2m(da.latest));
-        if(curEnd>=empLatest)continue;
-        const addable=Math.min((em.maxDay||10)*60-(t2m(shift.end)-t2m(shift.start)),(em.minWk-ewkH[em.id])*60,empLatest-curEnd);
-        if(addable<=0)continue;
-        const newEnd=Math.min(empLatest,curEnd+Math.floor(addable));
-        const extraH=(newEnd-curEnd)/60;
-        shift.end=m2t(newEnd);
-        shift.lunchBreak=(t2m(shift.end)-t2m(shift.start))/60>lt;
-        ewkH[em.id]+=extraH;
-        const ds=dKey(addD(new Date(key),day));
-        const rate=effRate(em.wage,st.id,day,ds);
-        budUsed+=extraH*parseFloat(em.wage)*rate;
+      // Flag unstaffed open days
+      if(!staffed&&!isStoreClosed(ds)){
+        const potentials=S.employees.filter(e=>(e.storeIds||[]).includes(st.id));
+        let reason='No eligible employees for this day.';
+        if(!potentials.length) reason='No employees assigned to this store.';
+        else if(potentials.every(e=>(e.ptoDates||[]).includes(ds))) reason='All assigned employees have PTO this day.';
+        else if(potentials.every(e=>!(e.dayAvail||{})[day]?.on)) reason='No employees marked available this day.';
+        else if(elig.length===0) reason='All assigned employees hit their weekly hour or day limits.';
+        allFlags[st.id].push({day,reason,sev:'error'});
       }
     }
   }
+
+  // ── PHASE 3: Enforce MINIMUM WEEKLY HOURS ──
+  // For every employee under their minWk, add/extend shifts until they hit it
+  // This may cause budget overruns — that is correct behaviour, and we flag it
+  for(const em of S.employees){
+    if(ewkH[em.id]>=(em.minWk||0)) continue; // already at minimum
+    const need=Math.max(0,(em.minWk||0)-ewkH[em.id]);
+    if(need<=0) continue;
+    let remaining=need;
+
+    // Determine which stores this employee works at
+    const empStores=S.stores.filter(st=>(em.storeIds||[]).includes(st.id));
+    if(!empStores.length) continue;
+
+    // Strategy A: Extend existing shifts first
+    for(const st of empStores){
+      if(remaining<=0) break;
+      for(let day=0;day<7&&remaining>0;day++){
+        const shIdx=newSched[st.id][day]?.findIndex(sh=>sh.empId===em.id);
+        if(shIdx===-1||shIdx===undefined) continue;
+        const sh=newSched[st.id][day][shIdx];
+        const ds=dKey(addD(new Date(key),day));
+        const stH=getStoreHoursForDate(st,day,ds);
+        if(!stH?.open) continue;
+        const cM=t2m(stH.closeTime);
+        const curEnd=t2m(sh.end);
+        const da=(em.dayAvail||{})[day]||{};
+        let empLatest=cM; if(da.latest) empLatest=Math.min(cM,t2m(da.latest));
+        if(curEnd>=empLatest) continue;
+        const maxExtend=Math.min(
+          empLatest-curEnd,
+          (em.maxDay||10)*60-(t2m(sh.end)-t2m(sh.start)),
+          remaining*60
+        );
+        if(maxExtend<=0) continue;
+        const newEnd=Math.floor(curEnd+maxExtend);
+        const extraH=(newEnd-curEnd)/60;
+        sh.end=m2t(newEnd);
+        sh.lunchBreak=(t2m(sh.end)-t2m(sh.start))/60>lt;
+        ewkH[em.id]+=extraH;
+        remaining-=extraH;
+      }
+    }
+
+    // Strategy B: Add new shifts on available days not yet worked
+    if(remaining>0.05){
+      for(const st of empStores){
+        if(remaining<=0.05) break;
+        for(let day=0;day<7&&remaining>0.05;day++){
+          const ds=dKey(addD(new Date(key),day));
+          // Already has a shift this day?
+          if(newSched[st.id][day]?.some(sh=>sh.empId===em.id)) continue;
+          if(isStoreClosed(ds)) continue;
+          const stH=getStoreHoursForDate(st,day,ds);
+          if(!stH?.open) continue;
+          const da=(em.dayAvail||{})[day];
+          if(!da||!da.on) continue;
+          if((em.ptoDates||[]).includes(ds)) continue;
+          if(edW[em.id].length>=(7-(em.doff||2))) continue;
+          const cons=getConsecutiveDays(em.id,day,key,prevKey,newSched);
+          if(cons>=6) continue;
+
+          const oM=t2m(stH.openTime), cM=t2m(stH.closeTime);
+          let ss=oM; if(da.earliest) ss=Math.max(oM,t2m(da.earliest));
+          let empLatest=cM; if(da.latest) empLatest=Math.min(cM,t2m(da.latest));
+          // Shift length: min of (maxDay, remaining needed, store open duration)
+          const shiftLen=Math.min((em.maxDay||10)*60, remaining*60, empLatest-ss);
+          if(shiftLen<(em.minDay||4)*60) continue;
+          const se=Math.floor(ss+shiftLen);
+          const rawH=(se-ss)/60;
+          const doL=rawH>lt;
+          const nh=doL?rawH-.5:rawH;
+          const rate=effRate(em.wage,st.id,day,ds);
+          newSched[st.id][day].push({empId:em.id,start:m2t(ss),end:m2t(se),lunchBreak:doL,isOT:rate>1.0});
+          ewkH[em.id]+=nh;
+          remaining-=nh;
+          if(!edW[em.id].includes(day)) edW[em.id].push(day);
+        }
+      }
+    }
+
+    // Check if we still couldn't meet minimum
+    if(ewkH[em.id]<(em.minWk||0)-0.1){
+      const shortfall=((em.minWk||0)-ewkH[em.id]).toFixed(1);
+      // Add flag to each store this employee works at
+      for(const st of empStores){
+        allFlags[st.id].push({
+          day:-1,
+          reason:`${em.name}: scheduled ${ewkH[em.id].toFixed(1)}h, minimum is ${em.minWk}h. Shortfall: ${shortfall}h — not enough available days/hours to meet minimum.`,
+          sev:'warn'
+        });
+      }
+    }
+  }
+
+  // ── PHASE 4: Enforce MAXIMUM WEEKLY HOURS (trim any accidental overages) ──
+  for(const em of S.employees){
+    if(ewkH[em.id]<=(em.maxWk||40)) continue;
+    // Find and trim last shifts
+    let excess=ewkH[em.id]-(em.maxWk||40);
+    outer: for(const st of S.stores){
+      for(let day=6;day>=0&&excess>0;day--){
+        const sh=newSched[st.id][day]?.find(s=>s.empId===em.id);
+        if(!sh) continue;
+        const nh=netH(sh);
+        if(nh<=excess+(sh.lunchBreak?0.5:0)){
+          // Remove shift entirely
+          newSched[st.id][day]=newSched[st.id][day].filter(s=>s.empId!==em.id);
+          ewkH[em.id]-=nh; excess-=nh;
+        } else {
+          // Trim end of shift
+          const rawDur=t2m(sh.end)-t2m(sh.start);
+          const trimMins=Math.ceil(excess*60);
+          const newEnd=Math.max(t2m(sh.start)+(em.minDay||4)*60, t2m(sh.end)-trimMins);
+          sh.end=m2t(newEnd);
+          const newNh=netH(sh);
+          ewkH[em.id]-=(nh-newNh); excess=0;
+        }
+      }
+    }
+  }
+
+  // ── PHASE 5: Check for budget overruns caused by minimum hours ──
+  for(const st of S.stores){
+    const bud=(S.budgets[key]||{})[st.id]||0;
+    if(!bud) continue;
+    let stPay=0;
+    for(let d=0;d<7;d++){
+      const ds=dKey(addD(new Date(key),d));
+      for(const sh of newSched[st.id][d]||[]){
+        const em=S.employees.find(e=>e.id===sh.empId);
+        if(em) stPay+=shPay(sh,em.wage,st.id,d,ds);
+      }
+    }
+    if(stPay>bud){
+      const over=(stPay-bud).toFixed(2);
+      allFlags[st.id].push({
+        day:-1,
+        reason:`Payroll $${stPay.toFixed(2)} exceeds budget $${bud.toLocaleString()} by $${over}. This overrun is required to meet employee minimum hour guarantees.`,
+        sev:'warn'
+      });
+    }
+  }
+
+  // Attach flags
+  for(const st of S.stores) newSched[st.id]._flags=allFlags[st.id];
 
   S.schedules[key]=newSched;
   saveData();
   updatePayrollPill();
 
-  let total=0,flagCount=0;
+  let total=0,flagCount=0,errorFlags=0;
   for(const sid of Object.keys(newSched)){
-    for(let d=0;d<7;d++)total+=(newSched[sid][d]||[]).length;
-    flagCount+=(newSched[sid]._flags||[]).length;
+    for(let d=0;d<7;d++) total+=(newSched[sid][d]||[]).length;
+    for(const f of (newSched[sid]._flags||[])){
+      flagCount++;
+      if(f.sev==='error') errorFlags++;
+    }
   }
-  if(total===0)toast('No shifts generated — check employee availability & store hours match','warn');
+  if(total===0) toast('No shifts generated — check employee availability & store hours','warn');
   else{
-    const flagMsg=flagCount?` ⚠ ${flagCount} staffing issue(s) — check red flags`:'';
-    toast(`Generated ${total} shifts!${flagMsg}`,flagCount?'warn':'ok');
+    const parts=[];
+    parts.push(`${total} shifts generated`);
+    if(errorFlags) parts.push(`⚠ ${errorFlags} staffing gap(s)`);
+    if(flagCount-errorFlags) parts.push(`ℹ ${flagCount-errorFlags} notice(s)`);
+    toast(parts.join(' · '), flagCount?'warn':'ok');
   }
   renderSched();
 }
 
-// Check consecutive days for an employee (including previous week's end)
-function getConsecutiveDays(empId,upToDay,key,prevKey){
-  let count=0;
-  // Check from upToDay-1 backwards in current week
-  for(let d=upToDay-1;d>=0;d--){
-    const worked=Object.values((S.schedules[key]||{})).some(stSched=>(stSched[d]||[]).some(sh=>sh.empId===empId));
-    if(worked)count++;else break;
+/* ── Get store hours for a specific date (date-range overrides, else weekly default) ── */
+function getStoreHoursForDate(st, dayOfWeek, ds){
+  // Check date-range overrides first
+  if(st.hoursOverrides&&st.hoursOverrides.length){
+    for(const ov of st.hoursOverrides){
+      if(ds>=ov.from&&ds<=ov.to){
+        return{open:ov.open,openTime:ov.openTime||'10:00',closeTime:ov.closeTime||'18:00'};
+      }
+    }
   }
-  // If we got through all days in current week, check prev week's last days
+  // Fall back to weekly defaults
+  return (st.hours||[]).find(h=>h.day===dayOfWeek)||null;
+}
+
+/* ── Consecutive days check (uses newSched for current week in progress) ── */
+function getConsecutiveDays(empId, upToDay, key, prevKey, newSchedRef){
+  const sched=newSchedRef||S.schedules[key]||{};
+  let count=0;
+  for(let d=upToDay-1;d>=0;d--){
+    const worked=Object.values(sched).some(st=>(st[d]||[]).some(sh=>sh.empId===empId));
+    if(worked) count++; else break;
+  }
   if(count===upToDay){
+    const prevSched=S.schedules[prevKey]||{};
     for(let d=6;d>=0;d--){
-      const worked=Object.values((S.schedules[prevKey]||{})).some(stSched=>(stSched[d]||[]).some(sh=>sh.empId===empId));
-      if(worked)count++;else break;
+      const worked=Object.values(prevSched).some(st=>(st[d]||[]).some(sh=>sh.empId===empId));
+      if(worked) count++; else break;
     }
   }
   return count;
 }
 
-/* ── HOLIDAY CALENDAR ── */
-function calPrevMonth(){_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderCal();}
-function calNextMonth(){_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderCal();}
-function renderCal(){
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-lbl').textContent=`${months[_calMonth]} ${_calYear}`;
-  const fh=getFedHols(_calYear),today=dKey(new Date());
-  document.getElementById('cal-head').innerHTML=DS.map(d=>`<div class="cal-dh">${d}</div>`).join('');
-  const firstDay=new Date(_calYear,_calMonth,1).getDay();
-  const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
-  const prevDays=new Date(_calYear,_calMonth,0).getDate();
-  let cells='';
-  for(let i=firstDay-1;i>=0;i--)cells+=`<div class="cal-cell other">${prevDays-i}</div>`;
-  for(let d=1;d<=daysInMonth;d++){
-    const ds=`${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isFed=!!fh[ds],isCus=!!S.customHols[ds],isToday=ds===today,isClosed=!!(S.customHols[ds]?.storeClosed);
-    const title=fh[ds]||(S.customHols[ds]?.name)||'';
-    cells+=`<div class="cal-cell ${isFed?'federal':''} ${isCus?'custom-hol':''} ${isToday?'today':''} ${isClosed?'store-closed':''}" onclick="clickCalDay('${ds}')" title="${title}">${d}${isFed||isCus?`<div class="cal-dot"></div>`:''}</div>`;
-  }
-  const rem=(7-(firstDay+daysInMonth)%7)%7;
-  for(let d=1;d<=rem;d++)cells+=`<div class="cal-cell other">${d}</div>`;
-  document.getElementById('cal-grid').innerHTML=cells;
-  const customs=Object.entries(S.customHols).filter(([k])=>k.startsWith(`${_calYear}-${String(_calMonth+1).padStart(2,'0')}`)).sort(([a],[b])=>a.localeCompare(b));
-  document.getElementById('custom-hol-list').innerHTML=customs.length
-    ?customs.map(([k,v])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bdr2)"><div><span style="color:${v.storeClosed?'var(--err)':'var(--acc)'};font-size:11px">${k.slice(5)} — ${v.name}</span><span style="font-size:9px;color:var(--tx3);margin-left:5px">${v.isOT!==false?'OT':'No OT'}${v.storeClosed?' · Closed':''}</span></div><button class="ib del" style="width:22px;height:22px" onclick="removeCustomHolDirect('${k}')"><span class="mi" style="font-size:13px">close</span></button></div>`).join('')
-    :'<span style="font-size:11px">None this month</span>';
+/* ══════════════════════════════════════════════════════════════
+   EXPORTS
+══════════════════════════════════════════════════════════════ */
+// Export options state
+let _exportOpts = {hidePay: false};
+
+function openExportOptsDlg(type){
+  _exportType = type;
+  document.getElementById('exp-type-label').textContent = type.toUpperCase();
+  openDlg('dlg-export-opts');
 }
 
-function clickCalDay(ds){
-  _holPending=ds;
-  const y=parseInt(ds.slice(0,4)),fh=getFedHols(y);
-  const isFed=!!fh[ds];
-  const isCus=!!S.customHols[ds];
-  const date=new Date(ds+'T12:00:00');
-  document.getElementById('hol-date-lbl').textContent=date.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const fedInfo=document.getElementById('hol-fed-info');
-  fedInfo.style.display=isFed?'':'none';
-  if(isFed)document.getElementById('hol-fed-name').textContent=fh[ds];
-  document.getElementById('hol-name-inp').value=isCus?S.customHols[ds].name:(isFed?fh[ds]:'');
-  document.getElementById('hol-is-ot').checked=isCus?(S.customHols[ds].isOT!==false):true;
-  document.getElementById('hol-store-closed').checked=isCus?!!(S.customHols[ds].storeClosed):false;
-  document.getElementById('hol-remove-btn').style.display=isCus?'':'none';
-  openDlg('dlg-hol');
+function doExport(){
+  _exportOpts.hidePay = document.getElementById('exp-hide-pay').checked;
+  closeDlg('dlg-export-opts');
+  if(_exportType==='xlsx') exportXLSX();
+  else if(_exportType==='png') exportPNG();
+  else if(_exportType==='pdf') exportPDF();
 }
-function saveCustomHol(){
-  const name=document.getElementById('hol-name-inp').value.trim();
-  const isOT=document.getElementById('hol-is-ot').checked;
-  const storeClosed=document.getElementById('hol-store-closed').checked;
-  if(!name&&!storeClosed){toast('Enter a name or mark as closed','warn');return;}
-  S.customHols[_holPending]={name:name||'Closed',isOT,storeClosed};
-  saveData();closeDlg('dlg-hol');renderCal();toast('Holiday saved','ok');
-}
-function removeCustomHol(){delete S.customHols[_holPending];saveData();closeDlg('dlg-hol');renderCal();toast('Holiday removed');}
-function removeCustomHolDirect(ds){delete S.customHols[ds];saveData();renderCal();toast('Holiday removed');}
 
-/* ── EXPORTS ── */
 function exportXLSX(){
   if(typeof XLSX==='undefined'){toast('XLSX library not loaded','err');return;}
   const key=wk(_wkStart),sched=S.schedules[key]||{},wb=XLSX.utils.book_new();
   const sids=_stTab==='all'?S.stores.map(s=>s.id):[_stTab];
+  const hidePay=_exportOpts.hidePay;
   for(const sid of sids){
     const st=S.stores.find(s=>s.id===sid);if(!st)continue;
     const empSet=new Set();
@@ -1128,72 +1318,114 @@ function exportXLSX(){
     S.employees.filter(e=>(e.storeIds||[]).includes(sid)).forEach(e=>empSet.add(e.id));
     const emps=sortEmps([...empSet].map(id=>S.employees.find(e=>e.id===id)).filter(Boolean));
     const wsData=[];
-    const r0=[''];for(let i=0;i<7;i++){const d=addD(_wkStart,i);r0.push(`${d.getMonth()+1}/${d.getDate()}`)}r0.push('');r0.push('');wsData.push(r0);
-    wsData.push([st.name,...DAYS,'','']);
-    const r2=['Staff'];for(let i=0;i<7;i++){const h=(st.hours||[]).find(hh=>hh.day===i),d=addD(_wkStart,i),ds=dKey(d),hn=holName(ds),isSun=i===0&&st.sundayOT;let lbl=h?.open?`${fmtT(h.openTime).replace(' ','')}-${fmtT(h.closeTime).replace(' ','')}`:'-';if(hn)lbl+=' *';if(isSun)lbl+=' S';r2.push(lbl);}r2.push('Total Hours');r2.push('Total Pay');wsData.push(r2);
-    for(const em of emps){
-      const row=[em.name];let wkTot=0,wkPay2=0;
-      for(let d=0;d<7;d++){const dSh=((sched[sid]||{})[d]||[]).filter(sh=>sh.empId===em.id);if(!dSh.length){row.push('');continue;}const sh=dSh[0],nh=netH(sh);wkTot+=nh;const ds=dKey(addD(_wkStart,d)),rate=effRate(em.wage,sid,d,ds),pay2=shPay(sh,em.wage,sid,d,ds);wkPay2+=pay2;row.push(`${fmtT(sh.start).replace(' ','')}-${fmtT(sh.end).replace(' ','')}${sh.lunchBreak?' (L)':''}${rate>1?` x${rate}`:''}`)}
-      row.push(wkTot>0?parseFloat(wkTot.toFixed(2)):'');row.push(wkPay2>0?`$${wkPay2.toFixed(2)}`:'');wsData.push(row);
+    // Row 0: dates
+    const r0=[''];for(let i=0;i<7;i++){const d=addD(_wkStart,i);r0.push(`${d.getMonth()+1}/${d.getDate()}`);}
+    r0.push('Total Hrs');if(!hidePay)r0.push('Total Pay');
+    wsData.push(r0);
+    // Row 1: store + day names
+    wsData.push([st.name,...DAYS,'',hidePay?undefined:'']);
+    // Row 2: staff hours
+    const r2=['Staff'];
+    for(let i=0;i<7;i++){
+      const d=addD(_wkStart,i),ds=dKey(d);
+      const stH=getStoreHoursForDate(st,i,ds);
+      const hn=holName(ds),isSun=i===0&&st.sundayOT;
+      let lbl=stH?.open?`${fmtT(stH.openTime).replace(' ','')}-${fmtT(stH.closeTime).replace(' ','')}`:'-';
+      if(hn)lbl+=' *';if(isSun)lbl+=' S';
+      r2.push(lbl);
     }
-    wsData.push(['','','','','','','','','','']);
+    r2.push('');if(!hidePay)r2.push('');
+    wsData.push(r2);
+    // Employee rows
+    for(const em of emps){
+      const row=[em.name];let wkTot=0,wkPayAmt=0;
+      for(let d=0;d<7;d++){
+        const dSh=((sched[sid]||{})[d]||[]).filter(sh=>sh.empId===em.id);
+        if(!dSh.length){row.push('');continue;}
+        const sh=dSh[0],nh=netH(sh);wkTot+=nh;
+        const ds=dKey(addD(_wkStart,d)),rate=effRate(em.wage,sid,d,ds);
+        const payAmt=shPay(sh,em.wage,sid,d,ds);wkPayAmt+=payAmt;
+        row.push(`${fmtT(sh.start).replace(' ','')}-${fmtT(sh.end).replace(' ','')}${sh.lunchBreak?' (L)':''}${rate>1?` x${rate}`:''}`);
+      }
+      row.push(wkTot>0?parseFloat(wkTot.toFixed(2)):'');
+      if(!hidePay) row.push(wkPayAmt>0?`$${wkPayAmt.toFixed(2)}`:'');
+      wsData.push(row);
+    }
+    wsData.push(new Array(hidePay?9:10).fill(''));
     const bud=(S.budgets[key]||{})[sid]||0,totPay=wkPay(key,sid);
-    wsData.push(['Budget','','','','','','',`$${bud.toLocaleString()}`,'','']);
-    wsData.push(['Payroll Used','','','','','','',`$${totPay.toFixed(2)}`,'','']);
+    if(!hidePay){
+      wsData.push(['Budget','','','','','','',`$${bud.toLocaleString()}`,'','']);
+      wsData.push(['Payroll Used','','','','','','',`$${totPay.toFixed(2)}`,'','']);
+    }
     const ws=XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols']=[{wch:20},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:11},{wch:12}];
+    const numCols=hidePay?9:10;
+    ws['!cols']=Array(numCols).fill(null).map((_,i)=>({wch:i===0?20:i>=numCols-2?12:14}));
     ws['!rows']=[{hpt:15},{hpt:19},{hpt:17}];
     const range=XLSX.utils.decode_range(ws['!ref']);
-    for(let R=range.s.r;R<=range.e.r;R++)for(let C=range.s.c;C<=range.e.c;C++){const addr=XLSX.utils.encode_cell({r:R,c:C});if(!ws[addr])ws[addr]={v:'',t:'s'};ws[addr].s=xStyle(R,C,wsData[R]?.[C],wsData[0]?.length-1);}
+    const lastCol=hidePay?8:9;
+    for(let R=range.s.r;R<=range.e.r;R++)for(let C=range.s.c;C<=range.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr])ws[addr]={v:'',t:'s'};
+      ws[addr].s=xStyle(R,C,wsData[R]?.[C],lastCol,hidePay?lastCol-1:-1);
+    }
     XLSX.utils.book_append_sheet(wb,ws,st.name.slice(0,31));
   }
   const ds=`${_wkStart.getMonth()+1}-${_wkStart.getDate()}-${_wkStart.getFullYear()}`;
   XLSX.writeFile(wb,`schedy-${ds}.xlsx`);toast('Exported to Excel!','ok');
 }
-function xStyle(R,C,val,lastCol){
+
+function xStyle(R,C,val,lastCol,hoursCol){
   const b={top:{style:'thin',color:{rgb:'999999'}},bottom:{style:'thin',color:{rgb:'999999'}},left:{style:'thin',color:{rgb:'999999'}},right:{style:'thin',color:{rgb:'999999'}}};
   const base={font:{name:'Calibri',sz:10},alignment:{horizontal:'center',vertical:'center'},border:b};
   if(R===0)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
   if(R===1)return{...base,font:{name:'Calibri',sz:11,bold:true,color:{rgb:C===0?'22A850':'1E2A3A'}},fill:{fgColor:{rgb:'FFD966'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
   if(R===2)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'1E2A3A'}},fill:{fgColor:{rgb:'FFD966'},patternType:'solid'},alignment:{horizontal:C===0?'left':'center',vertical:'center'}};
   if(C===lastCol)return{...base,font:{name:'Calibri',sz:10,bold:true},fill:{fgColor:{rgb:'DDEEFF'},patternType:'solid'}};
-  if(C===lastCol-1)return{...base,font:{name:'Calibri',sz:10,bold:true},fill:{fgColor:{rgb:'D4EDDA'},patternType:'solid'}};
+  if(hoursCol>=0&&C===hoursCol)return{...base,font:{name:'Calibri',sz:10,bold:true},fill:{fgColor:{rgb:'D4EDDA'},patternType:'solid'}};
   if(C===0)return{...base,font:{name:'Calibri',sz:10,bold:true,color:{rgb:'E0E0E0'}},fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},alignment:{horizontal:'right',vertical:'center'}};
   if(val&&typeof val==='string'&&(val.includes('AM')||val.includes('PM')))return{...base,font:{name:'Calibri',sz:9,color:{rgb:'1E2A3A'}},fill:{fgColor:{rgb:'C8E6FF'},patternType:'solid'}};
   return{...base,fill:{fgColor:{rgb:'1E2A3A'},patternType:'solid'},font:{name:'Calibri',sz:10,color:{rgb:'555555'}}};
 }
 
+let _exportType='xlsx';
+
 async function exportPNG(){
   if(typeof html2canvas==='undefined'){toast('html2canvas not loaded','err');return;}
   toast('Capturing schedule...','');
   const el=document.getElementById('sched-content');
+  // Temporarily hide pay info if requested
+  if(_exportOpts.hidePay) el.setAttribute('data-hide-pay','1');
   try{
-    const canvas=await html2canvas(el,{scale:2,backgroundColor:getComputedStyle(document.body).getPropertyValue('--bg')||'#f8f9fa',useCORS:true,logging:false});
+    const bgColor=getComputedStyle(document.documentElement).getPropertyValue('--surf').trim()||'#ffffff';
+    const canvas=await html2canvas(el,{scale:2,backgroundColor:bgColor,useCORS:true,logging:false});
+    el.removeAttribute('data-hide-pay');
     const a=document.createElement('a');
     const ds=`${_wkStart.getMonth()+1}-${_wkStart.getDate()}-${_wkStart.getFullYear()}`;
     a.download=`schedy-${ds}.png`;a.href=canvas.toDataURL('image/png');a.click();
     toast('PNG exported!','ok');
-  }catch(e){toast('PNG export failed','err');console.error(e);}
+  }catch(e){el.removeAttribute('data-hide-pay');toast('PNG export failed','err');console.error(e);}
 }
 
 async function exportPDF(){
   if(typeof html2canvas==='undefined'){toast('html2canvas not loaded','err');return;}
   toast('Generating PDF...','');
   const el=document.getElementById('sched-content');
+  if(_exportOpts.hidePay) el.setAttribute('data-hide-pay','1');
   try{
-    const canvas=await html2canvas(el,{scale:2,backgroundColor:getComputedStyle(document.body).getPropertyValue('--bg')||'#f8f9fa',useCORS:true,logging:false});
+    const bgColor=getComputedStyle(document.documentElement).getPropertyValue('--surf').trim()||'#ffffff';
+    const canvas=await html2canvas(el,{scale:2,backgroundColor:bgColor,useCORS:true,logging:false});
+    el.removeAttribute('data-hide-pay');
     const imgData=canvas.toDataURL('image/png');
-    // Use print-friendly iframe approach
     const iframe=document.createElement('iframe');
     iframe.style.cssText='position:fixed;top:-10000px;left:-10000px;width:210mm;height:297mm;border:none';
     document.body.appendChild(iframe);
     const doc=iframe.contentDocument;
     const ds=`${_wkStart.getMonth()+1}-${_wkStart.getDate()}-${_wkStart.getFullYear()}`;
-    doc.write(`<!DOCTYPE html><html><head><title>Schedy Schedule ${ds}</title><style>body{margin:0;padding:0}img{max-width:100%;height:auto}@page{margin:8mm}</style></head><body><img src="${imgData}"></body></html>`);
+    doc.write(`<!DOCTYPE html><html><head><title>Schedy ${ds}</title><style>*{margin:0;padding:0}img{max-width:100%;height:auto}@page{margin:6mm}</style></head><body><img src="${imgData}"></body></html>`);
     doc.close();
-    setTimeout(()=>{iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),1000);},500);
-    toast('PDF sent to printer/save dialog','ok');
-  }catch(e){toast('PDF export failed','err');console.error(e);}
+    setTimeout(()=>{iframe.contentWindow.print();setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}},1500);},600);
+    toast('PDF dialog opened','ok');
+  }catch(e){el.removeAttribute('data-hide-pay');toast('PDF export failed','err');console.error(e);}
 }
 
 /* ── SETTINGS ── */
@@ -1224,6 +1456,70 @@ function importJSON(evt){
   const r=new FileReader();
   r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.stores)S.stores=d.stores;if(d.employees)S.employees=d.employees;if(d.schedules)S.schedules=d.schedules;if(d.budgets)S.budgets=d.budgets;if(d.customHols)S.customHols=d.customHols;if(d.settings)S.settings=Object.assign({},S.settings,d.settings);if(d.theme)S.theme=d.theme;saveData();loadSettUI();applyTheme(S.theme||'material-light');nav('dashboard');toast('Imported!','ok');}catch{toast('Invalid JSON','err');}};
   r.readAsText(f);evt.target.value='';
+}
+
+/* ── EXPORT OPTIONS ── */
+document.getElementById('exp-hide-pay').addEventListener('change',function(){
+  document.getElementById('exp-preview-text').textContent = this.checked
+    ? 'Pay rates and totals will be hidden — safe for sharing with staff.'
+    : 'All hours, shifts, and pay totals will be included.';
+});
+
+/* ── DATE RANGE HOURS ── */
+let _hrsRangeStoreId=null;
+function openHrsRangeDlg(){
+  // Use current editing store
+  document.getElementById('hrng-from').value='';
+  document.getElementById('hrng-to').value='';
+  document.getElementById('hrng-open').checked=true;
+  document.getElementById('hrng-ot').value='10:00';
+  document.getElementById('hrng-ct').value='18:00';
+  document.getElementById('hrng-note').value='';
+  openDlg('dlg-hrs-range');
+}
+function saveHrsRange(){
+  const from=document.getElementById('hrng-from').value;
+  const to=document.getElementById('hrng-to').value;
+  if(!from||!to){toast('From and To dates required','err');return;}
+  if(from>to){toast('From must be before To','err');return;}
+  const range={
+    from,to,
+    open:document.getElementById('hrng-open').checked,
+    openTime:document.getElementById('hrng-ot').value||'10:00',
+    closeTime:document.getElementById('hrng-ct').value||'18:00',
+    note:document.getElementById('hrng-note').value.trim()
+  };
+  const st=_stId?S.stores.find(s=>s.id===_stId):null;
+  if(st){
+    if(!st.hoursOverrides)st.hoursOverrides=[];
+    st.hoursOverrides.push(range);
+    st.hoursOverrides.sort((a,b)=>a.from.localeCompare(b.from));
+    renderStoreHrsOverrides(st.hoursOverrides);
+    saveData();
+  } else {
+    // Adding during create — store in temp
+    if(!window._tmpHrsOverrides)window._tmpHrsOverrides=[];
+    window._tmpHrsOverrides.push(range);
+    renderStoreHrsOverrides(window._tmpHrsOverrides);
+  }
+  closeDlg('dlg-hrs-range');
+  toast('Date range added','ok');
+}
+function renderStoreHrsOverrides(overrides){
+  const el=document.getElementById('st-hrs-overrides');
+  if(!el)return;
+  if(!overrides||!overrides.length){el.innerHTML='<p style="font-size:11px;color:var(--tx3);padding:6px 0">No date range overrides set.</p>';return;}
+  el.innerHTML=overrides.map((ov,i)=>`
+    <div class="hrs-override-item">
+      <span class="hrs-override-tag">${ov.from} → ${ov.to}</span>
+      <span style="font-size:11px">${ov.open?`${fmtT(ov.openTime)} - ${fmtT(ov.closeTime)}`:'Closed'}${ov.note?` · ${ov.note}`:''}</span>
+      <button class="ib del" style="width:24px;height:24px;margin-left:auto" onclick="removeHrsOverride(${i})"><span class="mi" style="font-size:13px">close</span></button>
+    </div>`).join('');
+}
+function removeHrsOverride(idx){
+  const st=_stId?S.stores.find(s=>s.id===_stId):null;
+  if(st&&st.hoursOverrides){st.hoursOverrides.splice(idx,1);renderStoreHrsOverrides(st.hoursOverrides);saveData();}
+  else if(window._tmpHrsOverrides){window._tmpHrsOverrides.splice(idx,1);renderStoreHrsOverrides(window._tmpHrsOverrides);}
 }
 
 /* ── BOOT ── */
